@@ -1,0 +1,50 @@
+[package]
+name = "recurate"
+version = "0.1.0"
+edition = "2021"
+description = "Recurate — desktop music player + YouTube re-curation pipeline"
+
+[dependencies]
+eframe = { version = "0.28", default-features = false, features = ["default_fonts", "glow", "persistence"] }
+egui = "0.28"
+egui_extras = { version = "0.28", features = ["all_loaders"] }
+
+cpal = "0.15"
+symphonia = { version = "0.5", features = ["mp3", "isomp4", "aac", "flac", "ogg", "wav"] }
+ringbuf = "0.4"
+rubato = "0.15"
+biquad = "0.4"
+
+walkdir = "2.5"
+lofty = "0.21"
+unicode-normalization = "0.1"
+regex = "1"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+directories = "5"
+
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+
+ureq = { version = "2", features = ["json", "tls"] }
+urlencoding = "2"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+anyhow = "1"
+thiserror = "1"
+once_cell = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true

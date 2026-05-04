@@ -1,0 +1,41 @@
+# Repo-wide ignores. Single .gitignore for the whole project.
+
+# Rust build artifacts
+target/
+# Cargo.lock is intentionally ignored while the project is in flux. For a
+# released binary the convention is to commit it for reproducible builds — drop
+# this line when you're ready to lock dependency versions.
+Cargo.lock
+
+# User dataset and downloads. The library is large (thousands of mp3s, hundreds
+# of MB → multiple GB) and not redistributable; never check it in.
+player/music/
+player/music_original/
+player/backup/
+player/logs/
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# IDE / editor scratch
+/.vscode
+/.idea
+*.swp
+*.swo
+*~
+
+# Local-only logs / scratch directories
+*.log
+/scratch
+/tmp
+
+# Claude Code working files (sessions, local config, memory, knowledge graph
+# output, and the per-repo CLAUDE.md). `plan.md` stays checked in — it's the
+# architecture spec.
+.claude/
+.claude.json
+.claude.local.json
+.anthropic/
+graphify-out/
+CLAUDE.md
