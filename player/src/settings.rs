@@ -26,6 +26,10 @@ pub struct ScanSettings {
 }
 
 impl Default for ScanSettings {
+    // Release builds ship with empty paths so a fresh install shows blank
+    // fields in Settings → Library paths and the user picks their own.
+    // Debug builds keep the cwd convenience for `cargo run` from `player/`.
+    #[cfg(debug_assertions)]
     fn default() -> Self {
         let cwd = std::env::current_dir().ok();
         let default_dest = cwd
@@ -39,6 +43,14 @@ impl Default for ScanSettings {
         Self {
             roots: vec![default_dest.to_string_lossy().to_string()],
             source_root: default_source.to_string_lossy().to_string(),
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn default() -> Self {
+        Self {
+            roots: Vec::new(),
+            source_root: String::new(),
         }
     }
 }
