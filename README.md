@@ -5,7 +5,7 @@ pipeline: it walks your existing music library, finds the cleanest audio-only
 upload of each track on YouTube, and atomically swaps your local files for the
 fresh download — all in one app.
 
-![Hero — AllSongs view](docs/screenshots/01-all-songs.png)
+![Hero — Songs view](docs/screenshots/songs.png)
 
 ---
 
@@ -36,8 +36,7 @@ search, score, download, replace, dedupe, and renumber.
 | Component | Status | What it does |
 |---|---|---|
 | **Player** | working | Native egui player: scan, play, queue, EQ, delete, renumber. |
-| **Replacer (embedded)** | working | YouTube search → audio-only filter → score → yt-dlp download → ID3 tag → atomic replace. Runs **inside** the Player on its own screen. |
-| **Replacer (Python)** | not started | Standalone CLI version (see `plan.md`). Optional — the embedded one already covers the workflow. |
+| **Replacer (embedded)** | working | YouTube search → audio-only filter → score → yt-dlp download → ID3 tag → atomic replace. Runs **inside** Recurate on its own screen. |
 
 The dataset this is built for: **2,457 mp3 files across 22 flat folders**,
 with naming patterns ranging from clean album tracks to bot-wall-defeating
@@ -104,7 +103,7 @@ something, the catalog is untouched.
 Edit both paths in **Settings → Library paths**. Changing them auto-rescans
 the moment you leave the Settings page.
 
-![Settings — paths](docs/screenshots/02-settings-paths.png)
+![Settings — paths](docs/screenshots/settings.png)
 
 ---
 
@@ -112,9 +111,9 @@ the moment you leave the Settings page.
 
 The top bar has buttons for every screen. Below is a tour with workflows.
 
-### AllSongs
+### Songs
 
-![AllSongs](docs/screenshots/01-all-songs.png)
+![Songs](docs/screenshots/songs.png)
 
 The flat list of every song in the destination library. Search by title /
 artist / album, sort by various keys, paginate at 50 rows per page (the
@@ -135,14 +134,14 @@ Three faceted views over the same library. Folders is the most useful
 for this dataset since the library is organized by genre/source folder
 rather than ID3 album metadata.
 
-![Folders](docs/screenshots/03-folders.png)
+![Albums](docs/screenshots/albums.png)
+![Artists](docs/screenshots/artists.png)
+![Folders](docs/screenshots/folders.png)
 
 ### Now Playing
 
 The full-screen "what's playing" view with cover art, scrubber,
 shuffle/repeat, and the queue.
-
-![Now Playing](docs/screenshots/04-now-playing.png)
 
 ### Queue
 
@@ -153,7 +152,7 @@ auto-evicted here.
 
 The headline feature. Read this section once before using it.
 
-![Replacer](docs/screenshots/05-replacer.png)
+![Replacer](docs/screenshots/replacer.png)
 
 The Replacer enumerates the **source** root (not the destination), so
 its song count reflects your catalog. The screen does not show a
@@ -192,7 +191,7 @@ past it:
   cookie database while running, so yt-dlp can't read the cookies until
   you exit.
 
-![Settings — Replacer](docs/screenshots/06-settings-replacer.png)
+![Settings — Replacer](docs/screenshots/settings.png)
 
 The status pill at the top of the Replacer screen turns amber if
 yt-dlp or ffmpeg is missing from `PATH`, and red if both are.
@@ -205,13 +204,13 @@ mirrored destination path doesn't exist yet, grouped by folder. One big
 no transcode. Use it once after pointing at a fresh destination, then
 run the Replacer to upgrade individual tracks.
 
-![Missing](docs/screenshots/07-missing.png)
+![Missing](docs/screenshots/missing.png)
 
 ### Duplicates
 
 Acoustic-fingerprint duplicate detection.
 
-![Duplicates](docs/screenshots/08-duplicates.png)
+![Duplicates](docs/screenshots/duplicates.png)
 
 Songs are grouped by **(audio fingerprint, duration in seconds, parent
 folder)**. The fingerprint is a 256-bit acoustic hash computed from two
@@ -234,7 +233,7 @@ sequence stays contiguous.
 
 ### Settings
 
-![Settings](docs/screenshots/09-settings.png)
+![Settings](docs/screenshots/settings.png)
 
 Library paths, renumber threshold, replacer backend, API key, cookies
 browser. The API key is stored locally in `settings.toml`; a
@@ -260,7 +259,7 @@ EQ screen is the UI for tuning it.)
 3. Save and navigate away from Settings. Both roots auto-rescan.
 4. Go to **Missing** and click **Copy all N missing from source**. This
    populates the destination with a copy of everything.
-5. AllSongs now shows your full library. Play whatever.
+5. Songs now shows your full library. Play whatever.
 
 ### "I want to upgrade my Discord-grade rips to YouTube audio"
 
@@ -391,13 +390,12 @@ reason. The full path goes to the log if you want details.
 ## Project layout
 
 ```
-Youtube/
+Recurate/
 ├── README.md             # This file
-├── CLAUDE.md             # Engineering notes for future contributors
-├── plan.md               # Authoritative architecture spec
+├── .gitignore
 ├── docs/
 │   └── screenshots/      # Images referenced from this README
-└── player/
+└── player/               # The Rust crate (binary name: recurate)
     ├── Cargo.toml
     ├── src/
     │   ├── main.rs       # eframe entry point
@@ -409,15 +407,16 @@ Youtube/
     │   ├── replacer/     # title cleaner, YouTube search, scoring,
     │   │                 # yt-dlp+ffmpeg download, search/download workers
     │   ├── ui/           # App, screens, components, toasts
-    │   └── renumberer.rs # Track-number normalizer (shared spec)
+    │   └── renumberer.rs # Track-number normalizer
     ├── tests/            # Integration tests (renumberer, library_dedup)
-    └── music/            # The user's library (gitignored)
+    ├── music/            # Destination root (gitignored)
+    └── music_original/   # Source root, read-only catalog (gitignored)
 ```
 
 For deeper architectural details — fingerprint algorithm history, the
 two-root replace pipeline, why downloads use `--cookies-from-browser`,
-why the Replacer screen has no per-song UI — see `plan.md` and
-`CLAUDE.md`.
+why the Replacer screen has no per-song UI — read the doc comments in
+the relevant modules (`data/fingerprint.rs`, `replacer/`, `ui/app.rs`).
 
 ---
 
@@ -433,15 +432,14 @@ populate them:
 
 | Filename | Capture |
 |---|---|
-| `01-all-songs.png` | The AllSongs screen with the library loaded. Make sure the search bar and at least 10 rows are visible. |
-| `02-settings-paths.png` | Settings screen, "Library paths" section visible. |
-| `03-folders.png` | Folders view with several folder cards. |
-| `04-now-playing.png` | Now Playing during playback (cover art + scrubber). |
-| `05-replacer.png` | The Replacer screen mid-run, with the status pill, folder picker, and stat lines visible. |
-| `06-settings-replacer.png` | Settings → Replacer panel with backend dropdown + cookies field visible. |
-| `07-missing.png` | The Missing page with at least one folder group expanded. |
-| `08-duplicates.png` | The Duplicates page showing at least one duplicate group. |
-| `09-settings.png` | The Settings screen, top of the page. |
+| `songs.png` | The Songs screen with the library loaded. Search bar + at least 10 rows visible. |
+| `albums.png` | Albums view with several album cards. |
+| `artists.png` | Artists view with several artist cards. |
+| `folders.png` | Folders view with several folder cards. |
+| `replacer.png` | The Replacer screen mid-run — status pill, folder picker, and stat lines visible. |
+| `missing.png` | The Missing page with at least one folder group expanded. |
+| `duplicates.png` | The Duplicates page showing at least one duplicate group. |
+| `settings.png` | The Settings screen, top of the page. |
 
 Save into `docs/screenshots/`. The README will pick them up
 automatically — Markdown viewers fall back to broken-image icons until
