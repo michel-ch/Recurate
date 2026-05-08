@@ -117,7 +117,9 @@ The top bar has buttons for every screen. Below is a tour with workflows.
 
 The flat list of every song in the destination library. Search by title /
 artist / album, sort by various keys, paginate at 50 rows per page (the
-library is too large to render all rows at once). Click a row to play.
+library is too large to render all rows at once). Click anywhere on a
+row — or use the per-row **▶** button — to start playback. The trailing
+**✕** removes the file (renumbers the folder afterwards).
 
 **Keyboard shortcuts that work everywhere:**
 
