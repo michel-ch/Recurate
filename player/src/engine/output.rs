@@ -20,7 +20,13 @@ pub struct AudioOutput {
     producer: Mutex<ringbuf::HeapProd<f32>>,
     config: OutputConfig,
     is_playing: Arc<AtomicBool>,
+    /// Frames played since the last `reset_position` / seek anchor.
     samples_played: Arc<AtomicU64>,
+    /// Anchor (in ms) added to the local samples_played counter when reporting
+    /// `played_duration`. After a seek to T, the local counter restarts from 0
+    /// and this is set to T, so the UI sees position == T immediately rather
+    /// than snapping back to 0 while the decoder refills the buffer.
+    position_offset_ms: Arc<AtomicU64>,
     volume: Arc<AtomicU32>,
     skip_samples: Arc<AtomicUsize>,
 }
@@ -58,6 +64,7 @@ impl AudioOutput {
 
         let is_playing = Arc::new(AtomicBool::new(false));
         let samples_played = Arc::new(AtomicU64::new(0));
+        let position_offset_ms = Arc::new(AtomicU64::new(0));
         let volume = Arc::new(AtomicU32::new(1.0_f32.to_bits()));
         let skip_samples = Arc::new(AtomicUsize::new(0));
 
@@ -185,6 +192,7 @@ impl AudioOutput {
             config: OutputConfig { sample_rate, channels },
             is_playing,
             samples_played,
+            position_offset_ms,
             volume,
             skip_samples,
         })
@@ -205,6 +213,7 @@ impl AudioOutput {
 
     pub fn clear(&self) {
         self.samples_played.store(0, Ordering::Relaxed);
+        self.position_offset_ms.store(0, Ordering::Relaxed);
         self.is_playing.store(false, Ordering::Relaxed);
     }
 
@@ -219,7 +228,17 @@ impl AudioOutput {
 
     pub fn played_duration(&self) -> Duration {
         let frames = self.samples_played.load(Ordering::Relaxed);
-        Duration::from_secs_f64(frames as f64 / self.config.sample_rate.max(1) as f64)
+        let local_ms = (frames * 1000) / self.config.sample_rate.max(1) as u64;
+        let anchor_ms = self.position_offset_ms.load(Ordering::Relaxed);
+        Duration::from_millis(anchor_ms + local_ms)
+    }
+
+    /// Anchor the reported playback position to `ms` and zero the local
+    /// sample counter. Used by the engine's seek handler so the UI sees the
+    /// new position immediately, not a momentary 0 while the decoder refills.
+    pub fn set_position_anchor_ms(&self, ms: u64) {
+        self.position_offset_ms.store(ms, Ordering::Relaxed);
+        self.samples_played.store(0, Ordering::Relaxed);
     }
 
     pub fn buffered_samples(&self) -> usize {

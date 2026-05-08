@@ -66,15 +66,22 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
             for local_i in range {
                 let i = start + local_i;
                 let song = &songs[i];
-                ui.horizontal(|ui| {
-                    let row = song_row::draw(ui, i, song, current_id == Some(song.id));
-                    if row.clicked {
-                        play_idx = Some(i);
-                    }
-                    if ui.small_button("✕").on_hover_text("Delete").clicked() {
-                        delete_request = Some(song.id);
-                    }
-                });
+                let row = song_row::draw_with_options(
+                    ui,
+                    i,
+                    song,
+                    current_id == Some(song.id),
+                    song_row::RowOptions {
+                        show_remove: true,
+                        remove_hover: Some("Delete"),
+                    },
+                );
+                if row.clicked {
+                    play_idx = Some(i);
+                }
+                if row.remove_clicked {
+                    delete_request = Some(song.id);
+                }
             }
         },
     );
@@ -212,15 +219,22 @@ pub fn draw_folders(ui: &mut egui::Ui, app: &mut App) {
                 let mut play_request: Option<(Vec<Song>, usize)> = None;
                 let mut delete_request: Option<i64> = None;
                 for (i, song) in songs.iter().enumerate() {
-                    ui.horizontal(|ui| {
-                        let row = song_row::draw(ui, i, song, false);
-                        if row.clicked {
-                            play_request = Some((songs.clone(), i));
-                        }
-                        if ui.small_button("✕").clicked() {
-                            delete_request = Some(song.id);
-                        }
-                    });
+                    let row = song_row::draw_with_options(
+                        ui,
+                        i,
+                        song,
+                        false,
+                        song_row::RowOptions {
+                            show_remove: true,
+                            remove_hover: Some("Delete"),
+                        },
+                    );
+                    if row.clicked {
+                        play_request = Some((songs.clone(), i));
+                    }
+                    if row.remove_clicked {
+                        delete_request = Some(song.id);
+                    }
                 }
                 if let Some((list, idx)) = play_request {
                     app.playback.play_songs(list, idx, None);

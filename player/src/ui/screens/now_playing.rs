@@ -1,4 +1,5 @@
 use crate::domain::Screen;
+use crate::ui::components::mini_player::{draw_seek_slider, format_position};
 use crate::ui::App;
 
 pub fn draw(ui: &mut egui::Ui, app: &mut App) {
@@ -28,14 +29,8 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
         ui.label(egui::RichText::new(&song.album).weak());
         ui.add_space(20.0);
 
-        let mut frac = state.progress();
-        let resp = ui.add(
-            egui::Slider::new(&mut frac, 0.0..=1.0)
-                .show_value(false)
-                .clamp_to_range(true),
-        );
-        if resp.drag_stopped() || resp.lost_focus() {
-            app.playback.seek_fraction(frac);
+        if let Some(target) = draw_seek_slider(ui, &state) {
+            app.playback.seek_fraction(target);
         }
         ui.label(format_position(state.current_position_ms, state.duration_ms));
 
@@ -67,10 +62,3 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     });
 }
 
-fn format_position(current_ms: u64, duration_ms: u64) -> String {
-    fn fmt(ms: u64) -> String {
-        let s = ms / 1000;
-        format!("{}:{:02}", s / 60, s % 60)
-    }
-    format!("{} / {}", fmt(current_ms), fmt(duration_ms))
-}

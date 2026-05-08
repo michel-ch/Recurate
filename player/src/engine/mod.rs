@@ -132,12 +132,17 @@ fn run_engine(cmd_rx: Receiver<EngineCmd>, event_tx: Sender<EngineEvent>, output
             Ok(EngineCmd::SeekFraction(fraction)) => {
                 if let Some(job) = current_job.as_mut() {
                     let target = job.duration.mul_f32(fraction.clamp(0.0, 1.0));
+                    let target_ms = target.as_millis() as u64;
                     if let Err(e) = job.seek(target) {
                         tracing::warn!("seek failed: {e:#}");
                     }
                     let out = output.lock();
-                    out.clear();
                     out.drain_buffer();
+                    // Anchor the position counter to the seek target so
+                    // `played_duration()` immediately reports the new position
+                    // instead of dropping to 0 (which made the UI slider snap
+                    // back to the start the moment the user released).
+                    out.set_position_anchor_ms(target_ms);
                     if !paused {
                         out.play();
                     }

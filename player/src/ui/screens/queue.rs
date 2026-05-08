@@ -15,15 +15,22 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
         let mut jump_to: Option<usize> = None;
         let mut remove_id: Option<i64> = None;
         for (i, song) in queue.items.iter().enumerate() {
-            ui.horizontal(|ui| {
-                let row = song_row::draw(ui, i, song, current == Some(i));
-                if row.clicked {
-                    jump_to = Some(i);
-                }
-                if ui.small_button("✕").on_hover_text("Remove from queue").clicked() {
-                    remove_id = Some(song.id);
-                }
-            });
+            let row = song_row::draw_with_options(
+                ui,
+                i,
+                song,
+                current == Some(i),
+                song_row::RowOptions {
+                    show_remove: true,
+                    remove_hover: Some("Remove from queue"),
+                },
+            );
+            if row.clicked {
+                jump_to = Some(i);
+            }
+            if row.remove_clicked {
+                remove_id = Some(song.id);
+            }
         }
         if let Some(idx) = jump_to {
             app.playback.jump_to(idx);
