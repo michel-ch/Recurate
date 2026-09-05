@@ -142,7 +142,7 @@ fn channel_or_uploader(e: &PlaylistEntry) -> &str {
 /// `"Artist - Title"` video titles split on the first ` - `; otherwise the
 /// whole title is the title and the channel (minus yt-dlp's ` - Topic`
 /// suffix) is the artist.
-fn split_artist_title(video_title: &str, channel: &str) -> (String, String) {
+pub fn split_artist_title(video_title: &str, channel: &str) -> (String, String) {
     let t = video_title.trim();
     if let Some((a, b)) = t.split_once(" - ") {
         let a = a.trim();
