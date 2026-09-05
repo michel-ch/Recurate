@@ -114,10 +114,169 @@ fn draw_folder_list(ui: &mut egui::Ui, app: &mut App, dest_root: &PathBuf) {
     });
 }
 
-fn draw_editor(ui: &mut egui::Ui, _app: &mut App, folder: &PathBuf) {
+fn draw_editor(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
     ui.heading(folder.file_name().and_then(|s| s.to_str()).unwrap_or("?"));
     ui.label(egui::RichText::new(folder.display().to_string()).weak());
     ui.separator();
-    ui.label("(add songs and reorder come in the next tasks)");
-    let _ = renumberer::next_index(folder);
+
+    draw_add_songs(ui, app, folder);
+    ui.separator();
+    draw_reorder(ui, app, folder);
+}
+
+fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
+    use crate::data::scanner::song_id_from_path;
+    use crate::replacer::download_worker::{DownloadRequest, DownloadState};
+    use crate::replacer::link_list::parse_lines;
+    use crate::replacer::playlist::sanitize_filename;
+    use crate::ui::screens::replacer::download_worker;
+
+    ui.collapsing("Add songs", |ui| {
+        ui.label(
+            "One per line: a YouTube video or playlist link, or a title like \n             \"Powfu death bed\". Titles are matched to the best audio-only result.",
+        );
+        ui.add(
+            egui::TextEdit::multiline(&mut app.playlists.paste_text)
+                .desired_rows(5)
+                .desired_width(f32::INFINITY)
+                .hint_text("https://youtu.be/…
+Artist song name
+…"),
+        );
+
+        let resolving = app.playlists.resolve.running.load(std::sync::atomic::Ordering::Relaxed);
+        if resolving {
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(300));
+        }
+        let cookies_browser = {
+            let s = app.settings.read().replacer.cookies_browser.trim().to_string();
+            if s.is_empty() { None } else { Some(s) }
+        };
+
+        ui.horizontal(|ui| {
+            let lines = parse_lines(&app.playlists.paste_text);
+            let can = !resolving && !lines.is_empty() && crate::replacer::youtube::ytdlp_available();
+            if ui
+                .add_enabled(can, egui::Button::new(format!("Find & download {} line(s)", lines.len())))
+                .clicked()
+            {
+                app.playlists.last_outcomes.clear();
+                app.playlists.resolve.start(lines, cookies_browser.clone());
+            }
+            if resolving {
+                ui.spinner();
+                ui.label(egui::RichText::new("resolving…").weak());
+            }
+            if ui.button("Clear").clicked() {
+                app.playlists.paste_text.clear();
+                app.playlists.last_outcomes.clear();
+            }
+        });
+
+        // Resolver finished: queue downloads for every resolved item.
+        let finished = app.playlists.resolve.outcomes.lock().take();
+        if let Some(outcomes) = finished {
+            let dl = download_worker(app.library.clone()).clone();
+            let (mut next, pad) = renumberer::next_index(folder);
+            let mut queued = 0usize;
+            let mut failed = 0usize;
+            for o in &outcomes {
+                match &o.result {
+                    Ok(items) => {
+                        for r in items {
+                            let stem = format!("{next:0pad$} - {} - {}", r.title, r.artist);
+                            let dest = folder.join(format!("{}.mp3", sanitize_filename(&stem)));
+                            let id = song_id_from_path(&dest);
+                            dl.enqueue(DownloadRequest {
+                                song_id: id,
+                                source_path: dest.clone(),
+                                dest_path: dest,
+                                video_url: r.video_url.clone(),
+                                cookies_browser: cookies_browser.clone(),
+                            });
+                            app.playlists.queued_ids.insert(id);
+                            next += 1;
+                            queued += 1;
+                        }
+                    }
+                    Err(_) => failed += 1,
+                }
+            }
+            app.playlists.last_outcomes = outcomes;
+            if queued > 0 {
+                app.toast_info(format!("Queued {queued} download(s) into {}", folder.display()));
+            }
+            if failed > 0 {
+                app.toast_warn(format!("{failed} line(s) could not be resolved — see list below"));
+            }
+        }
+
+        // Batch bookkeeping: once nothing we queued is still pending, renumber
+        // the folder so a partial failure leaves no gap (03 missing → 01,02,03).
+        if !app.playlists.queued_ids.is_empty() {
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));
+            let dl = download_worker(app.library.clone()).clone();
+            let ids: Vec<i64> = app.playlists.queued_ids.iter().copied().collect();
+            let (pending, done, failed) = dl.read_states(|s| {
+                let mut p = 0;
+                let mut d = 0;
+                let mut f = 0;
+                for id in &ids {
+                    match s.get(id) {
+                        Some(DownloadState::Pending) => p += 1,
+                        Some(DownloadState::Done) => d += 1,
+                        Some(DownloadState::Failed { .. }) => f += 1,
+                        _ => {}
+                    }
+                }
+                (p, d, f)
+            });
+            ui.horizontal(|ui| {
+                ui.label(format!("Downloading: {pending} pending, {done} done, {failed} failed"));
+                let paused = dl.is_paused();
+                if ui.button(if paused { "▶ Resume" } else { "⏸ Pause" }).clicked() {
+                    dl.set_paused(!paused);
+                }
+            });
+            if pending == 0 {
+                let threshold = app.settings.read().renumber.threshold;
+                match renumberer::renumber_folder(folder, threshold) {
+                    Ok(n) => {
+                        if let Err(e) = app.library.refresh_folder(folder) {
+                            tracing::warn!("refresh after batch failed: {e:#}");
+                        }
+                        app.toast_info(format!("{done} added · renumbered {n} file(s)"));
+                    }
+                    Err(e) => app.toast_error(format!("Renumber failed: {e}")),
+                }
+                app.playlists.queued_ids.clear();
+            }
+        }
+
+        // Per-line outcome list (failures first so they are visible).
+        if !app.playlists.last_outcomes.is_empty() {
+            ui.separator();
+            for o in &app.playlists.last_outcomes {
+                match &o.result {
+                    Ok(items) => {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(120, 200, 120),
+                            format!("✓ {} → {} track(s)", o.line.text(), items.len()),
+                        );
+                    }
+                    Err(e) => {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(220, 120, 120),
+                            format!("✗ {} — {e}", o.line.text()),
+                        )
+                        .on_hover_text("Fix the line and run again; successful lines were already queued.");
+                    }
+                }
+            }
+        }
+    });
+}
+
+fn draw_reorder(ui: &mut egui::Ui, _app: &mut App, _folder: &PathBuf) {
+    ui.label("(reorder comes in the next task)");
 }
