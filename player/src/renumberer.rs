@@ -192,3 +192,85 @@ pub fn renumber_folder(folder: &Path, threshold: f32) -> Result<usize> {
     let plan = analyze(folder, threshold)?;
     apply(&plan)
 }
+
+/// Build a plan that numbers `ordered` 1..N in the given order. Every path
+/// must be an existing file directly inside `folder`; files in the folder
+/// that are *not* listed are appended after the listed ones in their
+/// current filename order so nothing silently loses its prefix.
+pub fn plan_order(folder: &Path, ordered: &[PathBuf]) -> Result<RenumberPlan> {
+    let mut on_disk: Vec<PathBuf> = Vec::new();
+    for e in std::fs::read_dir(folder).with_context(|| format!("read_dir {}", folder.display()))? {
+        let p = match e {
+            Ok(v) => v.path(),
+            Err(_) => continue,
+        };
+        let ext = p
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_default();
+        if p.is_file() && SUPPORTED.contains(&ext.as_str()) {
+            on_disk.push(p);
+        }
+    }
+    on_disk.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+
+    let mut sequence: Vec<PathBuf> = Vec::with_capacity(on_disk.len());
+    for p in ordered {
+        if !on_disk.iter().any(|d| d == p) {
+            return Err(anyhow!("{} is not an audio file in {}", p.display(), folder.display()));
+        }
+        if !sequence.contains(p) {
+            sequence.push(p.clone());
+        }
+    }
+    for p in on_disk {
+        if !sequence.contains(&p) {
+            sequence.push(p);
+        }
+    }
+
+    let pad_width = compute_pad_width(sequence.len()).max(2);
+    let mut pairs = Vec::with_capacity(sequence.len());
+    for (i, path) in sequence.iter().enumerate() {
+        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("track");
+        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("mp3");
+        let (rest, old_idx) = match split_prefix(stem) {
+            Some((digits, rest)) => (rest.to_string(), digits.parse::<i32>().unwrap_or(0)),
+            None => (stem.to_string(), 0),
+        };
+        let new_idx = (i + 1) as i32;
+        pairs.push(RenamePair {
+            from: path.clone(),
+            to: folder.join(format!("{new_idx:0pad_width$} - {rest}.{ext}")),
+            old_index: old_idx,
+            new_index: new_idx,
+        });
+    }
+    Ok(RenumberPlan {
+        pairs,
+        skipped_no_prefix: 0,
+        total_audio: sequence.len(),
+    })
+}
+
+/// `(next track number, pad width)` for appending a new file to `folder`.
+/// Pad is at least 2 so a fresh playlist starts at `01`.
+pub fn next_index(folder: &Path) -> (usize, usize) {
+    let count = std::fs::read_dir(folder)
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| {
+                    let p = e.path();
+                    let ext = p
+                        .extension()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_ascii_lowercase())
+                        .unwrap_or_default();
+                    p.is_file() && SUPPORTED.contains(&ext.as_str())
+                })
+                .count()
+        })
+        .unwrap_or(0);
+    (count + 1, compute_pad_width(count + 1).max(2))
+}
