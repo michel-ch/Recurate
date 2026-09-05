@@ -278,6 +278,131 @@ Artist song name
     });
 }
 
-fn draw_reorder(ui: &mut egui::Ui, _app: &mut App, _folder: &PathBuf) {
-    ui.label("(reorder comes in the next task)");
+fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
+    // Refresh the working copy when the folder or library changes, but never
+    // while the user has unapplied edits (dirty = order differs from disk).
+    let version = app.library.version();
+    let folder_changed = app.playlists.order_folder.as_ref() != Some(folder);
+    if folder_changed || (app.playlists.order_version != version && !is_dirty(app, folder)) {
+        app.playlists.order = app.library.songs_in_folder(folder);
+        app.playlists.order.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name()));
+        app.playlists.order_version = version;
+        app.playlists.order_folder = Some(folder.clone());
+        app.playlists.move_target = 1;
+    }
+    let n = app.playlists.order.len();
+    if n == 0 {
+        ui.label("This playlist is empty. Add songs above.");
+        return;
+    }
+    let dirty = is_dirty(app, folder);
+
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("Order").strong());
+        ui.label(
+            egui::RichText::new("drag rows, or use the buttons; nothing is renamed until you apply")
+                .weak(),
+        );
+        if ui.add_enabled(dirty, egui::Button::new("Apply order (rename files)")).clicked() {
+            apply_order(app, folder);
+        }
+        if ui.add_enabled(dirty, egui::Button::new("Revert")).clicked() {
+            app.playlists.order_folder = None; // forces reload next frame
+        }
+    });
+
+    let row_h = ui.text_style_height(&egui::TextStyle::Body) + 8.0;
+    let mut mv: Option<(usize, usize)> = None; // (from, to)
+    let mut drop_at: Option<(usize, usize)> = None;
+
+    // Snapshot so the row closures don't hold a borrow on `app`.
+    let rows: Vec<(i64, String, String)> = app
+        .playlists
+        .order
+        .iter()
+        .map(|s| (s.id, s.title.clone(), s.artist.clone()))
+        .collect();
+
+    egui::ScrollArea::vertical()
+        .auto_shrink([false; 2])
+        .show_rows(ui, row_h, n, |ui, range| {
+            for i in range {
+                let (song_id, title, artist) = &rows[i];
+                let id = egui::Id::new(("pl_row", folder, *song_id));
+                let frame = egui::Frame::none().inner_margin(2.0);
+                let (_, dropped) = ui.dnd_drop_zone::<usize, ()>(frame, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.dnd_drag_source(id, i, |ui| {
+                            ui.label(egui::RichText::new("☰").weak());
+                            ui.label(format!("{:02}", i + 1));
+                        });
+                        let title_w = (ui.available_width() - 260.0).max(40.0);
+                        ui.add_sized([title_w, row_h], egui::Label::new(title).truncate());
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.small_button("⇲ Last").clicked() {
+                                mv = Some((i, n - 1));
+                            }
+                            if ui.small_button("⇱ First").clicked() {
+                                mv = Some((i, 0));
+                            }
+                            if ui.add_enabled(i + 1 < n, egui::Button::new("▼").small()).clicked() {
+                                mv = Some((i, i + 1));
+                            }
+                            if ui.add_enabled(i > 0, egui::Button::new("▲").small()).clicked() {
+                                mv = Some((i, i - 1));
+                            }
+                            ui.label(egui::RichText::new(artist).weak());
+                        });
+                    });
+                });
+                if let Some(from) = dropped {
+                    drop_at = Some((*from, i));
+                }
+            }
+        });
+
+    ui.horizontal(|ui| {
+        ui.label("Move track #");
+        let mut from = app.playlists.move_target.clamp(1, n);
+        ui.add(egui::DragValue::new(&mut from).range(1..=n));
+        app.playlists.move_target = from;
+        ui.label("to position");
+        let to_id = ui.make_persistent_id("pl_move_to");
+        let mut to: usize = ui.memory(|m| m.data.get_temp(to_id)).unwrap_or(1);
+        ui.add(egui::DragValue::new(&mut to).range(1..=n));
+        ui.memory_mut(|m| m.data.insert_temp(to_id, to));
+        if ui.button("Move").clicked() {
+            mv = Some((from - 1, to - 1));
+        }
+    });
+
+    if let Some((from, to)) = drop_at.or(mv) {
+        if from != to && from < n && to < n {
+            let s = app.playlists.order.remove(from);
+            app.playlists.order.insert(to, s);
+        }
+    }
+}
+
+fn is_dirty(app: &App, folder: &PathBuf) -> bool {
+    if app.playlists.order_folder.as_ref() != Some(folder) {
+        return false;
+    }
+    let mut on_disk = app.library.songs_in_folder(folder);
+    on_disk.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name()));
+    on_disk.iter().map(|s| s.id).ne(app.playlists.order.iter().map(|s| s.id))
+}
+
+fn apply_order(app: &mut App, folder: &PathBuf) {
+    let ordered: Vec<PathBuf> = app.playlists.order.iter().map(|s| s.path.clone()).collect();
+    match renumberer::plan_order(folder, &ordered).and_then(|p| renumberer::apply(&p)) {
+        Ok(n) => {
+            if let Err(e) = app.library.refresh_folder(folder) {
+                tracing::warn!("refresh after reorder failed: {e:#}");
+            }
+            app.playlists.order_folder = None; // reload from disk
+            app.toast_info(format!("Renamed {n} file(s)"));
+        }
+        Err(e) => app.toast_error(format!("Reorder failed: {e}")),
+    }
 }
