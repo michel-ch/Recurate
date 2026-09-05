@@ -208,6 +208,23 @@ run the Replacer to upgrade individual tracks.
 
 ![Missing](docs/screenshots/missing.png)
 
+### Playlists
+
+Every folder in the destination root is a playlist. The Playlists hub
+lists them on the left (**＋ New** creates an empty folder) and edits the
+selected one on the right:
+
+- **Add songs** — paste one entry per line: a YouTube video or playlist
+  link, or a plain title such as `Powfu death bed`. Titles are resolved to
+  the best audio-only match with the same scoring the Replacer uses; lines
+  with no audio-only result are shown in red and skipped. Downloads are
+  named `NN - Title - Artist.mp3` continuing the folder's numbering and the
+  folder is renumbered once the batch finishes.
+- **Order** — drag rows by the ☰ handle, use ▲ ▼ / ⇱ First / ⇲ Last, or
+  type a track number and target position. Nothing touches disk until
+  **Apply order**, which rewrites the `NN - ` prefixes with the
+  renumberer's two-phase rename.
+
 ### Playlist
 
 Download a whole YouTube playlist as new library content. Paste a
