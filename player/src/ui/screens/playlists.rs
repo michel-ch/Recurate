@@ -28,6 +28,8 @@ pub struct PlaylistsUi {
     pub order_version: u64,
     pub order_folder: Option<PathBuf>,
     pub move_target: usize,
+    /// Folder list sorted Z→A instead of the default A→Z (case-insensitive).
+    pub sort_desc: bool,
 }
 
 pub fn draw(ui: &mut egui::Ui, app: &mut App) {
@@ -94,19 +96,36 @@ fn draw_folder_list(ui: &mut egui::Ui, app: &mut App, dest_root: &PathBuf) {
             }
         }
     });
+    ui.horizontal(|ui| {
+        ui.label("Sort:");
+        let label = if app.playlists.sort_desc { "Name Z→A" } else { "Name A→Z" };
+        if ui
+            .small_button(label)
+            .on_hover_text("Toggle playlist name order")
+            .clicked()
+        {
+            app.playlists.sort_desc = !app.playlists.sort_desc;
+        }
+    });
     ui.separator();
 
     let folders: Arc<Vec<PathBuf>> = app.library_folders();
+    let mut sorted: Vec<(String, &PathBuf)> = folders
+        .iter()
+        .map(|f| {
+            let name = f.file_name().and_then(|s| s.to_str()).unwrap_or("?").to_string();
+            (name, f)
+        })
+        .collect();
+    sorted.sort_by_cached_key(|(name, _)| name.to_lowercase());
+    if app.playlists.sort_desc {
+        sorted.reverse();
+    }
     egui::ScrollArea::vertical().auto_shrink([false; 2]).show(ui, |ui| {
-        for folder in folders.iter() {
-            let label = folder
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("?")
-                .to_string();
-            let active = app.playlists.selected.as_ref() == Some(folder);
+        for (label, folder) in &sorted {
+            let active = app.playlists.selected.as_ref() == Some(*folder);
             if ui.selectable_label(active, label).clicked() {
-                app.playlists.selected = Some(folder.clone());
+                app.playlists.selected = Some((*folder).clone());
             }
         }
         // A freshly created, still-empty folder has no songs and therefore
