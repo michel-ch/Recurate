@@ -133,7 +133,8 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
 
     ui.collapsing("Add songs", |ui| {
         ui.label(
-            "One per line: a YouTube video or playlist link, or a title like \n             \"Powfu death bed\". Titles are matched to the best audio-only result.",
+            "One per line: a YouTube video or playlist link, or a title like \
+             \"Powfu death bed\". Titles are matched to the best audio-only result.",
         );
         ui.add(
             egui::TextEdit::multiline(&mut app.playlists.paste_text)
