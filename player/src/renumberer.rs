@@ -31,6 +31,23 @@ impl RenumberPlan {
 
 const SUPPORTED: &[&str] = &["mp3", "flac", "m4a", "ogg", "wav", "aac", "opus"];
 
+/// True for a regular audio file that should take part in numbering.
+/// Dot-prefixed names are skipped: yt-dlp writes its in-flight transcode as
+/// `.<stem>.dl.mp3` in the same folder, and renaming that mid-download would
+/// break the final atomic rename.
+fn is_audio_entry(p: &Path) -> bool {
+    if !p.is_file() {
+        return false;
+    }
+    if p.file_name().and_then(|s| s.to_str()).map_or(true, |n| n.starts_with('.')) {
+        return false;
+    }
+    p.extension()
+        .and_then(|s| s.to_str())
+        .map(|e| SUPPORTED.contains(&e.to_ascii_lowercase().as_str()))
+        .unwrap_or(false)
+}
+
 pub fn analyze(folder: &Path, threshold: f32) -> Result<RenumberPlan> {
     let mut entries: Vec<PathBuf> = Vec::new();
     for e in std::fs::read_dir(folder).with_context(|| format!("read_dir {}", folder.display()))? {
@@ -39,14 +56,7 @@ pub fn analyze(folder: &Path, threshold: f32) -> Result<RenumberPlan> {
             Err(_) => continue,
         };
         let p = e.path();
-        if !p.is_file() {
-            continue;
-        }
-        let ext = match p.extension().and_then(|s| s.to_str()) {
-            Some(e) => e.to_ascii_lowercase(),
-            None => continue,
-        };
-        if SUPPORTED.contains(&ext.as_str()) {
+        if is_audio_entry(&p) {
             entries.push(p);
         }
     }
@@ -204,12 +214,7 @@ pub fn plan_order(folder: &Path, ordered: &[PathBuf]) -> Result<RenumberPlan> {
             Ok(v) => v.path(),
             Err(_) => continue,
         };
-        let ext = p
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s.to_ascii_lowercase())
-            .unwrap_or_default();
-        if p.is_file() && SUPPORTED.contains(&ext.as_str()) {
+        if is_audio_entry(&p) {
             on_disk.push(p);
         }
     }
@@ -259,17 +264,7 @@ pub fn plan_order(folder: &Path, ordered: &[PathBuf]) -> Result<RenumberPlan> {
 pub fn next_index(folder: &Path) -> (usize, usize) {
     let count = std::fs::read_dir(folder)
         .map(|rd| {
-            rd.flatten()
-                .filter(|e| {
-                    let p = e.path();
-                    let ext = p
-                        .extension()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_ascii_lowercase())
-                        .unwrap_or_default();
-                    p.is_file() && SUPPORTED.contains(&ext.as_str())
-                })
-                .count()
+            rd.flatten().filter(|e| is_audio_entry(&e.path())).count()
         })
         .unwrap_or(0);
     (count + 1, compute_pad_width(count + 1).max(2))

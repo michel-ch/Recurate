@@ -153,7 +153,7 @@ fn plan_order_renames_to_requested_positions() {
 }
 
 #[test]
-fn plan_order_rejects_paths_outside_folder() {
+fn plan_order_rejects_missing_file() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("01 - A - X.mp3"), b"x").unwrap();
     let bogus = vec![dir.path().join("nope.mp3")];
@@ -168,4 +168,17 @@ fn next_index_counts_audio_files_and_pad() {
         std::fs::write(dir.path().join(format!("0{i} - T - A.mp3")), b"x").unwrap();
     }
     assert_eq!(recurate::renumberer::next_index(dir.path()), (10, 2));
+}
+
+#[test]
+fn numbering_ignores_in_flight_dot_files() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("01 - A - X.mp3"), b"x").unwrap();
+    std::fs::write(dir.path().join(".02 - B - X.dl.mp3"), b"x").unwrap();
+    assert_eq!(recurate::renumberer::next_index(dir.path()), (2, 2));
+    let plan =
+        recurate::renumberer::plan_order(dir.path(), &[dir.path().join("01 - A - X.mp3")]).unwrap();
+    assert_eq!(plan.total_audio, 1);
+    assert!(recurate::renumberer::plan_order(dir.path(), &[dir.path().join(".02 - B - X.dl.mp3")])
+        .is_err());
 }

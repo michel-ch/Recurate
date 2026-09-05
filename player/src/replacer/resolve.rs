@@ -44,11 +44,19 @@ impl ResolveJob {
         let running = self.running.clone();
         let outcomes = self.outcomes.clone();
         std::thread::spawn(move || {
+            // A panic inside yt-dlp JSON parsing or title cleaning must not
+            // leave `running` stuck at true (which would disable the Find
+            // button until restart); report it as a per-line failure instead.
             let out: Vec<LineOutcome> = lines
                 .into_iter()
                 .map(|line| {
-                    let result = resolve_line(&line, cookies_browser.as_deref())
-                        .map_err(|e| format!("{e:#}"));
+                    let attempt = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        resolve_line(&line, cookies_browser.as_deref())
+                    }));
+                    let result = match attempt {
+                        Ok(r) => r.map_err(|e| format!("{e:#}")),
+                        Err(_) => Err("resolver panicked on this line".to_string()),
+                    };
                     LineOutcome { line, result }
                 })
                 .collect();

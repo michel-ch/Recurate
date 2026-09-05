@@ -17,8 +17,12 @@ pub struct PlaylistsUi {
     pub paste_text: String,
     pub resolve: ResolveJob,
     pub last_outcomes: Vec<crate::replacer::resolve::LineOutcome>,
+    /// Folder the in-flight resolve / download batch was started for. Captured
+    /// on **Find & download** so switching playlists mid-batch can't redirect
+    /// downloads or the final renumber to a different folder.
+    pub batch_folder: Option<PathBuf>,
     /// ids queued for download by this screen; when none are still pending
-    /// the folder is renumbered once and this is cleared.
+    /// `batch_folder` is renumbered once and this is cleared.
     pub queued_ids: HashSet<i64>,
     pub order: Vec<Song>,
     pub order_version: u64,
@@ -35,6 +39,8 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
         ui.label(egui::RichText::new("every folder in the destination root is a playlist").weak());
     });
     ui.separator();
+
+    poll_batch(ui.ctx(), app);
 
     let dest_root: PathBuf = app
         .settings
@@ -125,11 +131,7 @@ fn draw_editor(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
 }
 
 fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
-    use crate::data::scanner::song_id_from_path;
-    use crate::replacer::download_worker::{DownloadRequest, DownloadState};
     use crate::replacer::link_list::parse_lines;
-    use crate::replacer::playlist::sanitize_filename;
-    use crate::ui::screens::replacer::download_worker;
 
     ui.collapsing("Add songs", |ui| {
         ui.label(
@@ -140,9 +142,7 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
             egui::TextEdit::multiline(&mut app.playlists.paste_text)
                 .desired_rows(5)
                 .desired_width(f32::INFINITY)
-                .hint_text("https://youtu.be/…
-Artist song name
-…"),
+                .hint_text("https://youtu.be/…\nArtist song name\n…"),
         );
 
         let resolving = app.playlists.resolve.running.load(std::sync::atomic::Ordering::Relaxed);
@@ -156,12 +156,22 @@ Artist song name
 
         ui.horizontal(|ui| {
             let lines = parse_lines(&app.playlists.paste_text);
-            let can = !resolving && !lines.is_empty() && crate::replacer::youtube::ytdlp_available();
+            let batch_in_flight = !app.playlists.queued_ids.is_empty();
+            let can = !resolving
+                && !batch_in_flight
+                && !lines.is_empty()
+                && crate::replacer::youtube::ytdlp_available();
             if ui
                 .add_enabled(can, egui::Button::new(format!("Find & download {} line(s)", lines.len())))
+                .on_hover_text(if batch_in_flight {
+                    "Wait for the current batch to finish"
+                } else {
+                    "Resolves each line, then queues the downloads into this playlist"
+                })
                 .clicked()
             {
                 app.playlists.last_outcomes.clear();
+                app.playlists.batch_folder = Some(folder.clone());
                 app.playlists.resolve.start(lines, cookies_browser.clone());
             }
             if resolving {
@@ -174,84 +184,8 @@ Artist song name
             }
         });
 
-        // Resolver finished: queue downloads for every resolved item.
-        let finished = app.playlists.resolve.outcomes.lock().take();
-        if let Some(outcomes) = finished {
-            let dl = download_worker(app.library.clone()).clone();
-            let (mut next, pad) = renumberer::next_index(folder);
-            let mut queued = 0usize;
-            let mut failed = 0usize;
-            for o in &outcomes {
-                match &o.result {
-                    Ok(items) => {
-                        for r in items {
-                            let stem = format!("{next:0pad$} - {} - {}", r.title, r.artist);
-                            let dest = folder.join(format!("{}.mp3", sanitize_filename(&stem)));
-                            let id = song_id_from_path(&dest);
-                            dl.enqueue(DownloadRequest {
-                                song_id: id,
-                                source_path: dest.clone(),
-                                dest_path: dest,
-                                video_url: r.video_url.clone(),
-                                cookies_browser: cookies_browser.clone(),
-                            });
-                            app.playlists.queued_ids.insert(id);
-                            next += 1;
-                            queued += 1;
-                        }
-                    }
-                    Err(_) => failed += 1,
-                }
-            }
-            app.playlists.last_outcomes = outcomes;
-            if queued > 0 {
-                app.toast_info(format!("Queued {queued} download(s) into {}", folder.display()));
-            }
-            if failed > 0 {
-                app.toast_warn(format!("{failed} line(s) could not be resolved — see list below"));
-            }
-        }
-
-        // Batch bookkeeping: once nothing we queued is still pending, renumber
-        // the folder so a partial failure leaves no gap (03 missing → 01,02,03).
-        if !app.playlists.queued_ids.is_empty() {
-            ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));
-            let dl = download_worker(app.library.clone()).clone();
-            let ids: Vec<i64> = app.playlists.queued_ids.iter().copied().collect();
-            let (pending, done, failed) = dl.read_states(|s| {
-                let mut p = 0;
-                let mut d = 0;
-                let mut f = 0;
-                for id in &ids {
-                    match s.get(id) {
-                        Some(DownloadState::Pending) => p += 1,
-                        Some(DownloadState::Done) => d += 1,
-                        Some(DownloadState::Failed { .. }) => f += 1,
-                        _ => {}
-                    }
-                }
-                (p, d, f)
-            });
-            ui.horizontal(|ui| {
-                ui.label(format!("Downloading: {pending} pending, {done} done, {failed} failed"));
-                let paused = dl.is_paused();
-                if ui.button(if paused { "▶ Resume" } else { "⏸ Pause" }).clicked() {
-                    dl.set_paused(!paused);
-                }
-            });
-            if pending == 0 {
-                let threshold = app.settings.read().renumber.threshold;
-                match renumberer::renumber_folder(folder, threshold) {
-                    Ok(n) => {
-                        if let Err(e) = app.library.refresh_folder(folder) {
-                            tracing::warn!("refresh after batch failed: {e:#}");
-                        }
-                        app.toast_info(format!("{done} added · renumbered {n} file(s)"));
-                    }
-                    Err(e) => app.toast_error(format!("Renumber failed: {e}")),
-                }
-                app.playlists.queued_ids.clear();
-            }
+        if app.playlists.batch_folder.as_ref() == Some(folder) {
+            draw_batch_status(ui, app);
         }
 
         // Per-line outcome list (failures first so they are visible).
@@ -278,6 +212,147 @@ Artist song name
     });
 }
 
+/// Runs every frame the Playlists screen is shown, independent of which
+/// folder is selected: collects a finished resolve into download requests
+/// for `batch_folder`, and renumbers that folder once every queued download
+/// has left the `Pending` state.
+fn poll_batch(ctx: &egui::Context, app: &mut App) {
+    use crate::data::scanner::song_id_from_path;
+    use crate::replacer::download_worker::{DownloadRequest, DownloadState};
+    use crate::replacer::playlist::sanitize_filename;
+    use crate::ui::screens::replacer::download_worker;
+
+    let cookies_browser = {
+        let s = app.settings.read().replacer.cookies_browser.trim().to_string();
+        if s.is_empty() { None } else { Some(s) }
+    };
+
+    // Resolver finished: queue downloads for every resolved item.
+    let finished = app.playlists.resolve.outcomes.lock().take();
+    if let Some(outcomes) = finished {
+        let Some(folder) = app.playlists.batch_folder.clone() else {
+            return;
+        };
+        let folder = &folder;
+        let dl = download_worker(app.library.clone()).clone();
+        let (mut next, pad) = renumberer::next_index(folder);
+        let mut queued = 0usize;
+        let mut failed = 0usize;
+        for o in &outcomes {
+            match &o.result {
+                Ok(items) => {
+                    for r in items {
+                        let stem = format!("{next:0pad$} - {} - {}", r.title, r.artist);
+                        let dest = folder.join(format!("{}.mp3", sanitize_filename(&stem)));
+                        let id = song_id_from_path(&dest);
+                        dl.enqueue(DownloadRequest {
+                            song_id: id,
+                            source_path: dest.clone(),
+                            dest_path: dest,
+                            video_url: r.video_url.clone(),
+                            cookies_browser: cookies_browser.clone(),
+                        });
+                        app.playlists.queued_ids.insert(id);
+                        next += 1;
+                        queued += 1;
+                    }
+                }
+                Err(_) => failed += 1,
+            }
+        }
+        app.playlists.last_outcomes = outcomes;
+        if queued > 0 {
+            app.toast_info(format!("Queued {queued} download(s) into {}", folder.display()));
+        }
+        if failed > 0 {
+            app.toast_warn(format!("{failed} line(s) could not be resolved — see list below"));
+        }
+        if queued == 0 {
+            app.playlists.batch_folder = None;
+        }
+    }
+
+    // Batch bookkeeping: once nothing we queued is still pending, renumber
+    // the folder so a partial failure leaves no gap (03 missing → 01,02,03).
+    if !app.playlists.queued_ids.is_empty() {
+        let Some(folder) = app.playlists.batch_folder.clone() else {
+            app.playlists.queued_ids.clear();
+            return;
+        };
+        let folder = &folder;
+        ctx.request_repaint_after(std::time::Duration::from_millis(500));
+        let dl = download_worker(app.library.clone()).clone();
+        let ids: Vec<i64> = app.playlists.queued_ids.iter().copied().collect();
+        let (pending, done, _failed) = dl.read_states(|s| {
+            let mut p = 0;
+            let mut d = 0;
+            let mut f = 0;
+            for id in &ids {
+                match s.get(id) {
+                    Some(DownloadState::Pending) => p += 1,
+                    Some(DownloadState::Done) => d += 1,
+                    Some(DownloadState::Failed { .. }) => f += 1,
+                    _ => {}
+                }
+            }
+            (p, d, f)
+        });
+        if pending == 0 {
+            let threshold = app.settings.read().renumber.threshold;
+            match renumberer::renumber_folder(folder, threshold) {
+                Ok(n) => {
+                    if let Err(e) = app.library.refresh_folder(folder) {
+                        tracing::warn!("refresh after batch failed: {e:#}");
+                    }
+                    app.toast_info(format!("{done} added · renumbered {n} file(s)"));
+                }
+                Err(e) => app.toast_error(format!("Renumber failed: {e}")),
+            }
+            app.playlists.queued_ids.clear();
+            app.playlists.batch_folder = None;
+        }
+    }
+
+}
+
+/// Pending / done / failed counts for the current batch plus the shared
+/// worker's pause toggle. Shown under the folder the batch belongs to.
+fn draw_batch_status(ui: &mut egui::Ui, app: &mut App) {
+    use crate::replacer::download_worker::DownloadState;
+    use crate::ui::screens::replacer::download_worker;
+
+    if app.playlists.queued_ids.is_empty() {
+        return;
+    }
+    let dl = download_worker(app.library.clone()).clone();
+    let ids: Vec<i64> = app.playlists.queued_ids.iter().copied().collect();
+    let (pending, done, failed) = dl.read_states(|s| {
+        let mut p = 0;
+        let mut d = 0;
+        let mut f = 0;
+        for id in &ids {
+            match s.get(id) {
+                Some(DownloadState::Pending) => p += 1,
+                Some(DownloadState::Done) => d += 1,
+                Some(DownloadState::Failed { .. }) => f += 1,
+                _ => {}
+            }
+        }
+        (p, d, f)
+    });
+    ui.horizontal(|ui| {
+        ui.label(format!("Downloading: {pending} pending, {done} done, {failed} failed"));
+        let paused = dl.is_paused();
+        if ui
+            .button(if paused { "▶ Resume" } else { "⏸ Pause" })
+            .on_hover_text("Pauses the shared download worker (also used by Replacer and Playlist)")
+            .clicked()
+        {
+            dl.set_paused(!paused);
+        }
+    });
+}
+
 fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
     // Refresh the working copy when the folder or library changes, but never
     // while the user has unapplied edits (dirty = order differs from disk).
@@ -296,6 +371,8 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         return;
     }
     let dirty = is_dirty(app, folder);
+    let batch_here =
+        !app.playlists.queued_ids.is_empty() && app.playlists.batch_folder.as_ref() == Some(folder);
 
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Order").strong());
@@ -303,7 +380,15 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
             egui::RichText::new("drag rows, or use the buttons; nothing is renamed until you apply")
                 .weak(),
         );
-        if ui.add_enabled(dirty, egui::Button::new("Apply order (rename files)")).clicked() {
+        if ui
+            .add_enabled(dirty && !batch_here, egui::Button::new("Apply order (rename files)"))
+            .on_hover_text(if batch_here {
+                "Downloads into this playlist are still running"
+            } else {
+                "Rewrites the NN - prefixes on disk to match this order"
+            })
+            .clicked()
+        {
             apply_order(app, folder);
         }
         if ui.add_enabled(dirty, egui::Button::new("Revert")).clicked() {
@@ -351,7 +436,11 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                             if ui.add_enabled(i > 0, egui::Button::new("▲").small()).clicked() {
                                 mv = Some((i, i - 1));
                             }
-                            ui.label(egui::RichText::new(artist).weak());
+                            let artist_w = ui.available_width().max(20.0);
+                            ui.add_sized(
+                                [artist_w, row_h],
+                                egui::Label::new(egui::RichText::new(artist).weak()).truncate(),
+                            );
                         });
                     });
                 });
