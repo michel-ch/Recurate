@@ -208,6 +208,19 @@ run the Replacer to upgrade individual tracks.
 
 ![Missing](docs/screenshots/missing.png)
 
+### Playlist
+
+Download a whole YouTube playlist as new library content. Paste a
+playlist link, click **Fetch** (one `yt-dlp --flat-playlist` call, no
+downloads yet), optionally rename the target folder (defaults to the
+playlist title), then click **Download N tracks**. Files land in
+`<destination root>/<folder>/NN - Title - Artist.mp3` in playlist order,
+so track sorting, tag override and the renumberer treat them like any
+other album folder. Tracks already on disk are skipped, so re-running on
+an updated playlist only fetches the new entries. Uses the same 3-wide
+pausable download worker as the Replacer and the same
+`cookies_browser` setting for bot-detection walls.
+
 ### Duplicates
 
 Acoustic-fingerprint duplicate detection.

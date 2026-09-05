@@ -16,6 +16,7 @@ use crate::settings::Settings;
 use crate::ui::components::{mini_player, top_bar};
 use crate::ui::fonts;
 use crate::ui::screens;
+use crate::ui::screens::playlist::PlaylistUi;
 use crate::ui::toasts::{self, Toast, ToastLevel};
 
 pub const PAGE_SIZE: usize = 50;
@@ -80,6 +81,7 @@ pub struct App {
     pub fingerprint_running: Arc<AtomicBool>,
     pub fingerprint_library_version: u64,
     pub toasts: Vec<Toast>,
+    pub playlist: PlaylistUi,
 }
 
 impl App {
@@ -132,6 +134,7 @@ impl App {
             fingerprint_running: Arc::new(AtomicBool::new(false)),
             fingerprint_library_version: 0,
             toasts: Vec::new(),
+            playlist: PlaylistUi::default(),
         }
     }
 
@@ -595,6 +598,7 @@ impl eframe::App for App {
             Screen::Replacer => screens::replacer::draw(ui, self),
             Screen::Duplicates => screens::duplicates::draw(ui, self),
             Screen::Missing => screens::missing::draw(ui, self),
+            Screen::Playlist => screens::playlist::draw(ui, self),
             Screen::Settings => screens::settings::draw(ui, self),
         });
     }
