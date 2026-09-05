@@ -247,10 +247,6 @@ pub fn draw_folders(ui: &mut egui::Ui, app: &mut App) {
     });
 }
 
-pub fn draw_playlists(ui: &mut egui::Ui, _app: &mut App) {
-    ui.heading("Playlists");
-    ui.label("(playlists not implemented in MVP)");
-}
 
 fn draw_header(ui: &mut egui::Ui, app: &mut App, title: &str) {
     ui.horizontal(|ui| {

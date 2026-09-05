@@ -17,6 +17,7 @@ use crate::ui::components::{mini_player, top_bar};
 use crate::ui::fonts;
 use crate::ui::screens;
 use crate::ui::screens::playlist::PlaylistUi;
+use crate::ui::screens::playlists::PlaylistsUi;
 use crate::ui::toasts::{self, Toast, ToastLevel};
 
 pub const PAGE_SIZE: usize = 50;
@@ -82,6 +83,7 @@ pub struct App {
     pub fingerprint_library_version: u64,
     pub toasts: Vec<Toast>,
     pub playlist: PlaylistUi,
+    pub playlists: PlaylistsUi,
 }
 
 impl App {
@@ -135,6 +137,7 @@ impl App {
             fingerprint_library_version: 0,
             toasts: Vec::new(),
             playlist: PlaylistUi::default(),
+            playlists: PlaylistsUi::default(),
         }
     }
 
@@ -590,7 +593,7 @@ impl eframe::App for App {
             Screen::ArtistsList => screens::library::draw_artists(ui, self),
             Screen::ArtistDetail(artist) => screens::library::draw_artist_detail(ui, self, &artist),
             Screen::Folders => screens::library::draw_folders(ui, self),
-            Screen::Playlists => screens::library::draw_playlists(ui, self),
+            Screen::Playlists => screens::playlists::draw(ui, self),
             Screen::NowPlaying => screens::now_playing::draw(ui, self),
             Screen::Equalizer => screens::settings::draw_equalizer(ui, self),
             Screen::Search => screens::library::draw_search(ui, self),

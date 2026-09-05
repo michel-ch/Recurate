@@ -2,6 +2,7 @@ pub mod duplicates;
 pub mod library;
 pub mod missing;
 pub mod playlist;
+pub mod playlists;
 pub mod now_playing;
 pub mod queue;
 pub mod replacer;

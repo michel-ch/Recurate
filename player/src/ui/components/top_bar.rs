@@ -9,6 +9,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
         nav_button(ui, app, "Albums", Screen::AlbumsList);
         nav_button(ui, app, "Artists", Screen::ArtistsList);
         nav_button(ui, app, "Folders", Screen::Folders);
+        nav_button(ui, app, "Playlists", Screen::Playlists);
         nav_button(ui, app, "Queue", Screen::Queue);
         nav_button(ui, app, "Replacer", Screen::Replacer);
         nav_button(ui, app, "Missing", Screen::Missing);
