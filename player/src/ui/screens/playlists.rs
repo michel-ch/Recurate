@@ -427,8 +427,14 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         .map(|s| (s.id, s.title.clone(), s.artist.clone()))
         .collect();
 
+    // Leave room below the list for the "Move track #" row; otherwise the
+    // scroll area takes every remaining pixel and that row is pushed out of
+    // the window.
+    let bottom_reserve = ui.spacing().interact_size.y + ui.spacing().item_spacing.y * 3.0;
+    let list_h = (ui.available_height() - bottom_reserve).max(row_h * 3.0);
     egui::ScrollArea::vertical()
         .auto_shrink([false; 2])
+        .max_height(list_h)
         .show_rows(ui, row_h, n, |ui, range| {
             for i in range {
                 let (song_id, title, artist) = &rows[i];
