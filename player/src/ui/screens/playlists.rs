@@ -7,6 +7,31 @@ use crate::renumberer;
 use crate::replacer::resolve::ResolveJob;
 use crate::ui::App;
 
+/// A resolved paste whose enqueue is on hold until the user decides what to
+/// do with the entries that already exist in the playlist.
+pub struct PendingBatch {
+    pub folder: PathBuf,
+    pub items: Vec<(crate::replacer::resolve::Resolved, bool)>, // (item, is_duplicate)
+    pub outcomes: Vec<crate::replacer::resolve::LineOutcome>,
+}
+
+fn norm(s: &str) -> String {
+    s.trim().to_lowercase()
+}
+
+/// One flag per resolved item: true if the same (title, artist) already
+/// exists in the folder or earlier in this same batch.
+fn flag_duplicates(items: &[crate::replacer::resolve::Resolved], existing: &[Song]) -> Vec<bool> {
+    let mut seen: std::collections::HashSet<(String, String)> = existing
+        .iter()
+        .map(|s| (norm(&s.title), norm(&s.artist)))
+        .collect();
+    items
+        .iter()
+        .map(|r| !seen.insert((norm(&r.title), norm(&r.artist))))
+        .collect()
+}
+
 /// State for the Playlists hub. `order` is the working copy of the selected
 /// folder's songs that reorder controls mutate; nothing touches disk until
 /// **Apply order** is clicked.
@@ -34,6 +59,8 @@ pub struct PlaylistsUi {
     /// when the library version changes, so `is_dirty` doesn't filter the
     /// whole library every frame.
     pub on_disk_cache: Option<(u64, PathBuf, Vec<i64>)>,
+    /// Resolved items waiting for the user's answer to "N already exist".
+    pub pending_batch: Option<PendingBatch>,
 }
 
 pub fn draw(ui: &mut egui::Ui, app: &mut App) {
@@ -47,6 +74,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     ui.separator();
 
     poll_batch(ui.ctx(), app);
+    draw_duplicate_prompt(ui.ctx(), app);
 
     let dest_root: PathBuf = app
         .settings
@@ -179,7 +207,8 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
 
         ui.horizontal(|ui| {
             let lines = parse_lines(&app.playlists.paste_text);
-            let batch_in_flight = !app.playlists.queued_ids.is_empty();
+            let batch_in_flight =
+                !app.playlists.queued_ids.is_empty() || app.playlists.pending_batch.is_some();
             let can = !resolving
                 && !batch_in_flight
                 && !lines.is_empty()
@@ -240,58 +269,37 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
 /// for `batch_folder`, and renumbers that folder once every queued download
 /// has left the `Pending` state.
 fn poll_batch(ctx: &egui::Context, app: &mut App) {
-    use crate::data::scanner::song_id_from_path;
-    use crate::replacer::download_worker::{DownloadRequest, DownloadState};
-    use crate::replacer::playlist::sanitize_filename;
+    use crate::replacer::download_worker::DownloadState;
     use crate::ui::screens::replacer::download_worker;
 
-    let cookies_browser = {
-        let s = app.settings.read().replacer.cookies_browser.trim().to_string();
-        if s.is_empty() { None } else { Some(s) }
-    };
-
-    // Resolver finished: queue downloads for every resolved item.
+    // Resolver finished: classify the resolved items; the enqueue happens in
+    // `enqueue_batch`, either right away or after the duplicate prompt.
     let finished = app.playlists.resolve.outcomes.lock().take();
     if let Some(outcomes) = finished {
         let Some(folder) = app.playlists.batch_folder.clone() else {
             return;
         };
-        let folder = &folder;
-        let dl = download_worker(app.library.clone()).clone();
-        let (mut next, pad) = renumberer::next_index(folder);
-        let mut queued = 0usize;
-        let mut failed = 0usize;
-        for o in &outcomes {
-            match &o.result {
-                Ok(items) => {
-                    for r in items {
-                        let stem = format!("{next:0pad$} - {} - {}", r.title, r.artist);
-                        let dest = folder.join(format!("{}.mp3", sanitize_filename(&stem)));
-                        let id = song_id_from_path(&dest);
-                        dl.enqueue(DownloadRequest {
-                            song_id: id,
-                            source_path: dest.clone(),
-                            dest_path: dest,
-                            video_url: r.video_url.clone(),
-                            cookies_browser: cookies_browser.clone(),
-                        });
-                        app.playlists.queued_ids.insert(id);
-                        next += 1;
-                        queued += 1;
-                    }
-                }
-                Err(_) => failed += 1,
-            }
-        }
-        app.playlists.last_outcomes = outcomes;
-        if queued > 0 {
-            app.toast_info(format!("Queued {queued} download(s) into {}", folder.display()));
-        }
+        let items: Vec<crate::replacer::resolve::Resolved> = outcomes
+            .iter()
+            .filter_map(|o| o.result.as_ref().ok())
+            .flat_map(|v| v.iter().cloned())
+            .collect();
+        let failed = outcomes.iter().filter(|o| o.result.is_err()).count();
         if failed > 0 {
             app.toast_warn(format!("{failed} line(s) could not be resolved — see list below"));
         }
-        if queued == 0 {
-            app.playlists.batch_folder = None;
+        let existing = app.library.songs_in_folder(&folder);
+        let flags = flag_duplicates(&items, &existing);
+        let dup_count = flags.iter().filter(|d| **d).count();
+        let batch = PendingBatch {
+            folder,
+            items: items.into_iter().zip(flags).collect(),
+            outcomes,
+        };
+        if dup_count == 0 {
+            enqueue_batch(app, batch, false);
+        } else {
+            app.playlists.pending_batch = Some(batch);
         }
     }
 
@@ -336,6 +344,111 @@ fn poll_batch(ctx: &egui::Context, app: &mut App) {
         }
     }
 
+}
+
+/// Queue a resolved batch into the download worker. `skip_duplicates`
+/// drops items flagged as already present.
+fn enqueue_batch(app: &mut App, batch: PendingBatch, skip_duplicates: bool) {
+    use crate::data::scanner::song_id_from_path;
+    use crate::replacer::download_worker::DownloadRequest;
+    use crate::replacer::playlist::sanitize_filename;
+    use crate::ui::screens::replacer::download_worker;
+
+    let cookies_browser = {
+        let s = app.settings.read().replacer.cookies_browser.trim().to_string();
+        if s.is_empty() { None } else { Some(s) }
+    };
+    let folder = &batch.folder;
+    let dl = download_worker(app.library.clone()).clone();
+    let (mut next, pad) = renumberer::next_index(folder);
+    let mut queued = 0usize;
+    for (r, is_dup) in &batch.items {
+        if skip_duplicates && *is_dup {
+            continue;
+        }
+        let stem = format!("{next:0pad$} - {} - {}", r.title, r.artist);
+        let dest = folder.join(format!("{}.mp3", sanitize_filename(&stem)));
+        let id = song_id_from_path(&dest);
+        dl.enqueue(DownloadRequest {
+            song_id: id,
+            source_path: dest.clone(),
+            dest_path: dest,
+            video_url: r.video_url.clone(),
+            cookies_browser: cookies_browser.clone(),
+        });
+        app.playlists.queued_ids.insert(id);
+        next += 1;
+        queued += 1;
+    }
+    app.playlists.last_outcomes = batch.outcomes;
+    if queued > 0 {
+        app.toast_info(format!("Queued {queued} download(s) into {}", folder.display()));
+    } else {
+        app.playlists.batch_folder = None;
+    }
+}
+
+/// Modal shown when a paste resolved to songs already in the playlist.
+fn draw_duplicate_prompt(ctx: &egui::Context, app: &mut App) {
+    let Some(batch) = app.playlists.pending_batch.as_ref() else {
+        return;
+    };
+    let dups: Vec<String> = batch
+        .items
+        .iter()
+        .filter(|(_, d)| *d)
+        .map(|(r, _)| format!("{} — {}", r.title, r.artist))
+        .collect();
+    let total = batch.items.len();
+    let folder_name = batch
+        .folder
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("?")
+        .to_string();
+
+    let mut decision: Option<Option<bool>> = None; // Some(Some(skip)) or Some(None)=cancel
+    egui::Window::new("Already in playlist")
+        .collapsible(false)
+        .resizable(false)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(ctx, |ui| {
+            ui.label(format!(
+                "{} of {total} song(s) already exist in \"{folder_name}\":",
+                dups.len()
+            ));
+            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                for d in &dups {
+                    ui.label(format!("• {d}"));
+                }
+            });
+            ui.separator();
+            ui.horizontal(|ui| {
+                if ui.button("Skip duplicates").clicked() {
+                    decision = Some(Some(true));
+                }
+                if ui.button("Download anyway").clicked() {
+                    decision = Some(Some(false));
+                }
+                if ui.button("Cancel").clicked() {
+                    decision = Some(None);
+                }
+            });
+        });
+
+    match decision {
+        Some(Some(skip)) => {
+            let batch = app.playlists.pending_batch.take().unwrap();
+            enqueue_batch(app, batch, skip);
+        }
+        Some(None) => {
+            let batch = app.playlists.pending_batch.take().unwrap();
+            app.playlists.last_outcomes = batch.outcomes;
+            app.playlists.batch_folder = None;
+            app.toast_info("Nothing queued");
+        }
+        None => {}
+    }
 }
 
 /// Pending / done / failed counts for the current batch plus the shared
@@ -593,5 +706,24 @@ mod tests {
         let on_disk = vec![song(1, "a"), song(2, "b")];
         let ids: Vec<i64> = merge_order(current, &on_disk).iter().map(|s| s.id).collect();
         assert_eq!(ids, vec![2, 1]);
+    }
+
+    use crate::replacer::resolve::Resolved;
+
+    fn resolved(title: &str, artist: &str) -> Resolved {
+        Resolved { title: title.into(), artist: artist.into(), video_url: "u".into() }
+    }
+
+    #[test]
+    fn flags_case_insensitive_matches_against_folder_and_within_batch() {
+        let mut existing = song(1, "01 - death bed - Powfu");
+        existing.title = "death bed".into();
+        existing.artist = "Powfu".into();
+        let items = vec![
+            resolved("Death Bed", "powfu"), // in folder
+            resolved("New One", "X"),       // fresh
+            resolved("new one", "x"),       // dup of previous line
+        ];
+        assert_eq!(flag_duplicates(&items, &[existing]), vec![true, false, true]);
     }
 }
