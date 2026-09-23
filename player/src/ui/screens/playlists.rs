@@ -380,10 +380,13 @@ fn enqueue_batch(app: &mut App, batch: PendingBatch, skip_duplicates: bool) {
         next += 1;
         queued += 1;
     }
-    app.playlists.last_outcomes = batch.outcomes;
     if queued > 0 {
+        app.playlists.last_outcomes = batch.outcomes;
         app.toast_info(format!("Queued {queued} download(s) into {}", folder.display()));
     } else {
+        // Nothing was queued, so green "✓ … → N track(s)" lines would lie;
+        // keep only the failures worth fixing.
+        app.playlists.last_outcomes = batch.outcomes.into_iter().filter(|o| o.result.is_err()).collect();
         app.playlists.batch_folder = None;
     }
 }
@@ -443,7 +446,8 @@ fn draw_duplicate_prompt(ctx: &egui::Context, app: &mut App) {
         }
         Some(None) => {
             let batch = app.playlists.pending_batch.take().unwrap();
-            app.playlists.last_outcomes = batch.outcomes;
+            app.playlists.last_outcomes =
+                batch.outcomes.into_iter().filter(|o| o.result.is_err()).collect();
             app.playlists.batch_folder = None;
             app.toast_info("Nothing queued");
         }
@@ -498,11 +502,23 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         app.playlists.order_folder = Some(folder.clone());
         app.playlists.move_target = 1;
     } else if app.playlists.order_version != version {
-        // Disk changed (download landed, delete, external edit): merge so
-        // new songs show up immediately and unapplied edits survive.
+        // Disk changed (download landed, delete, external edit). If the user
+        // had no edits, take the disk order wholesale: parallel downloads land
+        // out of order and merging them would leave a spurious "dirty" list.
+        // With edits pending, merge so they survive and new songs still show.
+        let was_clean = matches!(
+            &app.playlists.on_disk_cache,
+            Some((v, f, ids))
+                if *v == app.playlists.order_version
+                    && f == folder
+                    && ids.iter().copied().eq(app.playlists.order.iter().map(|s| s.id))
+        );
         let on_disk = on_disk_songs(app, folder);
-        let current = std::mem::take(&mut app.playlists.order);
-        app.playlists.order = merge_order(current, &on_disk);
+        app.playlists.order = if was_clean {
+            on_disk
+        } else {
+            merge_order(std::mem::take(&mut app.playlists.order), &on_disk)
+        };
         app.playlists.order_version = version;
     }
     let n = app.playlists.order.len();
@@ -727,6 +743,14 @@ mod tests {
         let on_disk = vec![song(1, "a"), song(2, "b")];
         let ids: Vec<i64> = merge_order(current, &on_disk).iter().map(|s| s.id).collect();
         assert_eq!(ids, vec![2, 1]);
+    }
+
+    #[test]
+    fn merge_appends_several_new_songs_in_filename_order() {
+        let current = vec![song(1, "01 - a")];
+        let on_disk = vec![song(3, "03 - c"), song(1, "01 - a"), song(2, "02 - b")];
+        let ids: Vec<i64> = merge_order(current, &on_disk).iter().map(|s| s.id).collect();
+        assert_eq!(ids, vec![1, 2, 3]);
     }
 
     use crate::replacer::resolve::Resolved;
