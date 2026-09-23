@@ -224,6 +224,11 @@ selected one on the right:
   type a track number and target position. Nothing touches disk until
   **Apply order**, which rewrites the `NN - ` prefixes with the
   renumberer's two-phase rename.
+- **Duplicates** — if a pasted line resolves to a song already in the playlist
+  (same title and artist), a dialog lists them and lets you skip or download
+  anyway.
+- **Delete** — ✕ on a row deletes the file and renumbers the folder. Apply or
+  revert pending order edits first.
 
 ### Playlist
 
