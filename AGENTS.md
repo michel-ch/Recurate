@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Repository state
 
-**Player scaffolded with a fully-working embedded Replacer (search + download + in-place replace + backup); Python Replacer not started.** Layout:
+**Player working with an embedded Replacer (search + download + atomic replace into a destination root), a Playlist import page, and a Playlists hub (folder = playlist: add by link/title, reorder, delete); Python Replacer not started.** Layout:
 
 ```
 Youtube/
@@ -87,8 +87,8 @@ Run from `player/`:
 
 ```bash
 cargo check --all-targets                # Type-check lib + bin + tests
-cargo test                               # 50 tests (lib + library_dedup + renumberer integration)
-cargo test --test renumberer             # 5 renumberer integration tests
+cargo test                               # 68 tests (lib + library_dedup + renumberer integration)
+cargo test --test renumberer             # 9 renumberer integration tests
 cargo test --test library_dedup          # 4 path-canonicalization integration tests
 cargo run --release                      # Launch GUI; default scan root = $PWD/music
 

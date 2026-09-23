@@ -37,6 +37,8 @@ search, score, download, replace, dedupe, and renumber.
 |---|---|---|
 | **Player** | working | Native egui player: scan, play, queue, EQ, delete, renumber. |
 | **Replacer (embedded)** | working | YouTube search → audio-only filter → score → yt-dlp download → ID3 tag → atomic replace. Runs **inside** Recurate on its own screen. |
+| **Playlists** | working | Every destination folder is a playlist: create, add songs by link or title, reorder (drag / buttons / position), delete, duplicate check. |
+| **Playlist import** | working | Paste a YouTube playlist link → new numbered folder. |
 
 The dataset this is built for: **2,457 mp3 files across 22 flat folders**,
 with naming patterns ranging from clean album tracks to bot-wall-defeating
@@ -69,6 +71,10 @@ cd player
 cargo run --release
 ```
 
+On Windows, double-click `start.bat` in the repo root instead: it builds the
+release binary if needed (or launches the prebuilt one when cargo isn't
+installed) and opens the app.
+
 Default scan root is `<cwd>/music`, so launching from `player/` picks up
 `player/music/`. Settings persist at
 `%APPDATA%/Recurate/Recurate/settings.toml` after first save.
@@ -77,7 +83,7 @@ Default scan root is `<cwd>/music`, so launching from `player/` picks up
 
 ```bash
 cargo check --all-targets   # Type-check everything (lib + bin + tests)
-cargo test                  # 50 tests across 5 suites
+cargo test                  # 68 tests across 5 suites
 ```
 
 The test suites are pure unit / integration tests — they don't touch
@@ -442,7 +448,8 @@ Recurate/
     │   ├── engine/       # symphonia decoder + cpal output + EQ
     │   ├── playback/     # PlaybackController, Queue, deletion
     │   ├── replacer/     # title cleaner, YouTube search, scoring,
-    │   │                 # yt-dlp+ffmpeg download, search/download workers
+    │   │                 # yt-dlp+ffmpeg download, search/download workers,
+    │   │                 # playlist fetch, pasted-line parser + resolver
     │   ├── ui/           # App, screens, components, toasts
     │   └── renumberer.rs # Track-number normalizer
     ├── tests/            # Integration tests (renumberer, library_dedup)
