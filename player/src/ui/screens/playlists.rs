@@ -30,6 +30,10 @@ pub struct PlaylistsUi {
     pub move_target: usize,
     /// Folder list sorted Z→A instead of the default A→Z (case-insensitive).
     pub sort_desc: bool,
+    /// `(library_version, folder, ids sorted by filename)` — refreshed only
+    /// when the library version changes, so `is_dirty` doesn't filter the
+    /// whole library every frame.
+    pub on_disk_cache: Option<(u64, PathBuf, Vec<i64>)>,
 }
 
 pub fn draw(ui: &mut egui::Ui, app: &mut App) {
@@ -373,16 +377,20 @@ fn draw_batch_status(ui: &mut egui::Ui, app: &mut App) {
 }
 
 fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
-    // Refresh the working copy when the folder or library changes, but never
-    // while the user has unapplied edits (dirty = order differs from disk).
     let version = app.library.version();
     let folder_changed = app.playlists.order_folder.as_ref() != Some(folder);
-    if folder_changed || (app.playlists.order_version != version && !is_dirty(app, folder)) {
-        app.playlists.order = app.library.songs_in_folder(folder);
-        app.playlists.order.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name()));
+    if folder_changed {
+        app.playlists.order = on_disk_songs(app, folder);
         app.playlists.order_version = version;
         app.playlists.order_folder = Some(folder.clone());
         app.playlists.move_target = 1;
+    } else if app.playlists.order_version != version {
+        // Disk changed (download landed, delete, external edit): merge so
+        // new songs show up immediately and unapplied edits survive.
+        let on_disk = on_disk_songs(app, folder);
+        let current = std::mem::take(&mut app.playlists.order);
+        app.playlists.order = merge_order(current, &on_disk);
+        app.playlists.order_version = version;
     }
     let n = app.playlists.order.len();
     if n == 0 {
@@ -498,13 +506,40 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
     }
 }
 
-fn is_dirty(app: &App, folder: &PathBuf) -> bool {
+fn is_dirty(app: &mut App, folder: &PathBuf) -> bool {
     if app.playlists.order_folder.as_ref() != Some(folder) {
         return false;
     }
-    let mut on_disk = app.library.songs_in_folder(folder);
-    on_disk.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name()));
-    on_disk.iter().map(|s| s.id).ne(app.playlists.order.iter().map(|s| s.id))
+    let version = app.library.version();
+    let stale = match &app.playlists.on_disk_cache {
+        Some((v, f, _)) => *v != version || f != folder,
+        None => true,
+    };
+    if stale {
+        let ids: Vec<i64> = on_disk_songs(app, folder).iter().map(|s| s.id).collect();
+        app.playlists.on_disk_cache = Some((version, folder.clone(), ids));
+    }
+    let ids = &app.playlists.on_disk_cache.as_ref().unwrap().2;
+    ids.iter().copied().ne(app.playlists.order.iter().map(|s| s.id))
+}
+
+/// Reconcile the user's working order with what is on disk: songs that
+/// vanished are dropped, songs that appeared are appended (in filename
+/// order), everything else keeps its current relative position.
+fn merge_order(current: Vec<Song>, on_disk: &[Song]) -> Vec<Song> {
+    let live: std::collections::HashSet<i64> = on_disk.iter().map(|s| s.id).collect();
+    let mut merged: Vec<Song> = current.into_iter().filter(|s| live.contains(&s.id)).collect();
+    let have: std::collections::HashSet<i64> = merged.iter().map(|s| s.id).collect();
+    let mut new: Vec<&Song> = on_disk.iter().filter(|s| !have.contains(&s.id)).collect();
+    new.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name()));
+    merged.extend(new.into_iter().cloned());
+    merged
+}
+
+fn on_disk_songs(app: &App, folder: &PathBuf) -> Vec<Song> {
+    let mut v = app.library.songs_in_folder(folder);
+    v.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name()));
+    v
 }
 
 fn apply_order(app: &mut App, folder: &PathBuf) {
@@ -518,5 +553,45 @@ fn apply_order(app: &mut App, folder: &PathBuf) {
             app.toast_info(format!("Renamed {n} file(s)"));
         }
         Err(e) => app.toast_error(format!("Reorder failed: {e}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    fn song(id: i64, name: &str) -> Song {
+        Song {
+            id,
+            title: name.into(),
+            artist: String::new(),
+            album: String::new(),
+            album_artist: String::new(),
+            duration: Duration::ZERO,
+            year: None,
+            genre: None,
+            composer: None,
+            track_no: None,
+            path: PathBuf::from(format!("C:/pl/{name}.mp3")),
+            has_embedded_art: false,
+        }
+    }
+
+    #[test]
+    fn merge_keeps_user_order_drops_missing_appends_new() {
+        let current = vec![song(3, "c"), song(1, "a"), song(2, "b")];
+        let on_disk = vec![song(1, "a"), song(2, "b"), song(4, "d")];
+        let merged = merge_order(current, &on_disk);
+        let ids: Vec<i64> = merged.iter().map(|s| s.id).collect();
+        assert_eq!(ids, vec![1, 2, 4]);
+    }
+
+    #[test]
+    fn merge_with_no_changes_is_identity() {
+        let current = vec![song(2, "b"), song(1, "a")];
+        let on_disk = vec![song(1, "a"), song(2, "b")];
+        let ids: Vec<i64> = merge_order(current, &on_disk).iter().map(|s| s.id).collect();
+        assert_eq!(ids, vec![2, 1]);
     }
 }

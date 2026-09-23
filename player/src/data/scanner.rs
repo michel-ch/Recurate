@@ -18,6 +18,13 @@ pub fn scan_dir(root: &Path) -> Result<Vec<Song>> {
             continue;
         }
         let path = entry.path();
+        if path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map_or(false, |n| n.starts_with('.'))
+        {
+            continue;
+        }
         let ext = match path.extension().and_then(|s| s.to_str()) {
             Some(e) => e.to_ascii_lowercase(),
             None => continue,
