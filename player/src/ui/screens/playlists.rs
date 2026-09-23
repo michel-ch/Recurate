@@ -539,6 +539,8 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
     let row_h = ui.text_style_height(&egui::TextStyle::Body) + 8.0;
     let mut mv: Option<(usize, usize)> = None; // (from, to)
     let mut drop_at: Option<(usize, usize)> = None;
+    let mut delete_id: Option<i64> = None;
+    let can_delete = !dirty && !batch_here;
 
     // Snapshot so the row closures don't hold a borrow on `app`.
     let rows: Vec<(i64, String, String)> = app
@@ -567,9 +569,22 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                             ui.label(egui::RichText::new("☰").weak());
                             ui.label(format!("{:02}", i + 1));
                         });
-                        let title_w = (ui.available_width() - 260.0).max(40.0);
+                        let title_w = (ui.available_width() - 290.0).max(40.0);
                         ui.add_sized([title_w, row_h], egui::Label::new(title).truncate());
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui
+                                .add_enabled(can_delete, egui::Button::new("✕").small())
+                                .on_hover_text(if can_delete {
+                                    "Delete this file from the playlist folder and renumber"
+                                } else if dirty {
+                                    "Apply or revert the order first"
+                                } else {
+                                    "Downloads into this playlist are still running"
+                                })
+                                .clicked()
+                            {
+                                delete_id = Some(*song_id);
+                            }
                             if ui.small_button("⇲ Last").clicked() {
                                 mv = Some((i, n - 1));
                             }
@@ -616,6 +631,12 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
             let s = app.playlists.order.remove(from);
             app.playlists.order.insert(to, s);
         }
+    }
+
+    if let Some(id) = delete_id {
+        crate::ui::screens::library::handle_delete(app, id);
+        // handle_delete renumbers + refreshes; ids changed, so reload from disk.
+        app.playlists.order_folder = None;
     }
 }
 
