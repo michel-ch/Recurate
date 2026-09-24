@@ -11,6 +11,7 @@ Cargo.lock
 # of MB → multiple GB) and not redistributable; never check it in.
 player/music/
 player/music_original/
+player/my_music/
 player/backup/
 player/logs/
 
