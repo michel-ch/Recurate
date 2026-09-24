@@ -39,3 +39,6 @@ Thumbs.db
 .anthropic/
 graphify-out/
 CLAUDE.md
+
+# Built executables
+dist/
