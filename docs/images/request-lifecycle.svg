@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 856" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="request-lifecycle-title request-lifecycle-desc">
+      <title id="request-lifecycle-title">Request lifecycle: Start replace top match</title>
+      <desc id="request-lifecycle-desc">Sequence diagram showing the Replacer screen enqueueing a DownloadRequest to the DownloadWorker, which spawns yt-dlp and ffmpeg to write a temporary mp3, overrides its tags with lofty, atomically renames it over dest_path, refreshes the Library, and publishes DownloadState Done, or DownloadState Failed with a toast on error.</desc>
+      <defs>
+        <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap');</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#F6F3EC"/>
+
+      <!-- Lifelines: x = 104, 292, 480, 668, 856 -->
+      <line x1="104" y1="128" x2="104" y2="768" stroke="#33302a" stroke-opacity="0.20" stroke-width="1" stroke-dasharray="3,3"/>
+      <line x1="292" y1="128" x2="292" y2="768" stroke="#33302a" stroke-opacity="0.20" stroke-width="1" stroke-dasharray="3,3"/>
+      <line x1="480" y1="128" x2="480" y2="768" stroke="#33302a" stroke-opacity="0.20" stroke-width="1" stroke-dasharray="3,3"/>
+      <line x1="668" y1="128" x2="668" y2="768" stroke="#33302a" stroke-opacity="0.20" stroke-width="1" stroke-dasharray="3,3"/>
+      <line x1="856" y1="128" x2="856" y2="768" stroke="#33302a" stroke-opacity="0.20" stroke-width="1" stroke-dasharray="3,3"/>
+
+      <!-- ALT fragment frame -->
+      <rect x="92" y="356" width="776" height="388" rx="4" fill="#33302a" fill-opacity="0.02" stroke="#33302a" stroke-opacity="0.22" stroke-width="1"/>
+      <rect x="92" y="356" width="40" height="16" rx="2" fill="#F6F3EC" stroke="#33302a" stroke-opacity="0.22" stroke-width="1"/>
+      <text x="112" y="368" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
+      <text x="104" y="384" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">[exit 0 · temp file written]</text>
+      <line x1="100" y1="624" x2="860" y2="624" stroke="#33302a" stroke-opacity="0.20" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="104" y="648" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">[else · yt-dlp / ffmpeg error]</text>
+
+      <!-- Activation bars -->
+      <rect x="288" y="180" width="8" height="564" fill="#33302a" fill-opacity="0.06" stroke="#6B6356" stroke-width="0.8"/>
+      <rect x="476" y="236" width="8" height="92" fill="#33302a" fill-opacity="0.06" stroke="#6B6356" stroke-width="0.8"/>
+
+      <!-- Messages -->
+      <!-- M1 Replacer screen → DownloadWorker -->
+      <line x1="104" y1="176" x2="288" y2="176" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- M2 DownloadWorker → yt-dlp -->
+      <line x1="296" y1="232" x2="476" y2="232" stroke="#5C6B3F" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <!-- M3 yt-dlp → Filesystem -->
+      <line x1="484" y1="280" x2="668" y2="280" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- M4 yt-dlp → DownloadWorker (return) -->
+      <line x1="476" y1="328" x2="296" y2="328" stroke="#6B6356" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+      <!-- M5 DownloadWorker → Filesystem (override tags) -->
+      <line x1="296" y1="408" x2="668" y2="408" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- M6 DownloadWorker → Filesystem (atomic rename · focal) -->
+      <line x1="296" y1="456" x2="668" y2="456" stroke="#B3502F" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <!-- M7 DownloadWorker → Library -->
+      <line x1="296" y1="504" x2="856" y2="504" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- M8 DownloadWorker → Replacer screen (state read) -->
+      <line x1="288" y1="552" x2="104" y2="552" stroke="#6B6356" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+      <!-- M9 Replacer screen self: stats repaint -->
+      <path d="M 108 576 L 144 576 L 144 600 L 108 600" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- M10 DownloadWorker → Replacer screen (failed state read) -->
+      <line x1="288" y1="672" x2="104" y2="672" stroke="#6B6356" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+      <!-- M11 Replacer screen self: toast_error -->
+      <path d="M 108 696 L 144 696 L 144 720 L 108 720" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Message labels (masked, 8px above / below the stroke) -->
+      <rect x="152" y="156" width="88" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="200" y="164" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DOWNLOADREQUEST</text>
+      <rect x="112" y="184" width="168" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="200" y="192" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SONG_ID · DEST_PATH · VIDEO_URL</text>
+
+      <rect x="352" y="212" width="72" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="384" y="220" fill="#5C6B3F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SPAWN YT-DLP</text>
+      <rect x="312" y="240" width="144" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="384" y="248" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">--EMBED-METADATA · FFMPEG</text>
+
+      <rect x="532" y="260" width="88" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="576" y="268" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WRITE TEMP FILE</text>
+      <rect x="536" y="288" width="80" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="576" y="296" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">.&lt;STEM&gt;.DL.MP3</text>
+
+      <rect x="352" y="308" width="64" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="384" y="316" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">EXIT STATUS</text>
+
+      <rect x="312" y="388" width="152" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="384" y="396" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OVERRIDE_TAGS_FROM_FILENAME</text>
+      <rect x="304" y="416" width="168" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="384" y="424" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">LOFTY · TITLE / ARTIST / TRACK</text>
+
+      <rect x="536" y="436" width="72" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="576" y="444" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ATOMIC RENAME</text>
+      <rect x="536" y="464" width="80" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="576" y="472" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OVER DEST_PATH</text>
+
+      <rect x="696" y="484" width="128" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="760" y="492" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">LIBRARY::REFRESH_FOLDER</text>
+      <rect x="708" y="512" width="108" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="760" y="520" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DEST FOLDER RE-READ</text>
+
+      <rect x="144" y="532" width="108" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="196" y="540" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DOWNLOADSTATE::DONE</text>
+      <rect x="152" y="560" width="88" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="196" y="568" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">VIA READ_STATES</text>
+
+      <rect x="152" y="584" width="72" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="188" y="592" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">STATS REPAINT</text>
+
+      <rect x="120" y="652" width="156" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="196" y="660" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DOWNLOADSTATE::FAILED{ERROR}</text>
+      <rect x="152" y="680" width="88" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="196" y="688" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">VIA READ_STATES</text>
+
+      <rect x="152" y="704" width="64" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="184" y="712" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">TOAST_ERROR</text>
+
+      <!-- Actors -->
+      <!-- Replacer screen (input / UI) -->
+      <rect x="40" y="72" width="128" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="40" y="72" width="128" height="56" rx="6" fill="#6b6356" fill-opacity="0.10" stroke="#978C7B" stroke-width="1"/>
+      <rect x="48" y="80" width="28" height="12" rx="2" fill="none" stroke="#978c7b" stroke-opacity="0.40" stroke-width="0.8"/>
+      <text x="64" y="88" fill="#978C7B" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+      <text x="104" y="104" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Replacer screen</text>
+      <text x="104" y="120" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">screens/replacer.rs</text>
+
+      <!-- DownloadWorker (backend) -->
+      <rect x="228" y="72" width="128" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="228" y="72" width="128" height="56" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <rect x="236" y="80" width="40" height="12" rx="2" fill="none" stroke="#33302a" stroke-opacity="0.40" stroke-width="0.8"/>
+      <text x="256" y="88" fill="#33302a" fill-opacity="0.8" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">WORKER</text>
+      <text x="292" y="104" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">DownloadWorker</text>
+      <text x="292" y="120" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">3 threads · crossbeam</text>
+
+      <!-- yt-dlp + ffmpeg (external) -->
+      <rect x="416" y="72" width="128" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="416" y="72" width="128" height="56" rx="6" fill="#33302a" fill-opacity="0.03" stroke="#33302a" stroke-opacity="0.30" stroke-width="1"/>
+      <rect x="424" y="80" width="28" height="12" rx="2" fill="none" stroke="#33302a" stroke-opacity="0.22" stroke-width="0.8"/>
+      <text x="440" y="88" fill="#978C7B" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+      <text x="480" y="104" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">yt-dlp + ffmpeg</text>
+      <text x="480" y="120" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">child process</text>
+
+      <!-- Filesystem (store) -->
+      <rect x="604" y="72" width="128" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="604" y="72" width="128" height="56" rx="6" fill="#33302a" fill-opacity="0.05" stroke="#6B6356" stroke-width="1"/>
+      <rect x="612" y="80" width="28" height="12" rx="2" fill="none" stroke="#6b6356" stroke-opacity="0.40" stroke-width="0.8"/>
+      <text x="624" y="88" fill="#6B6356" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FS</text>
+      <text x="668" y="104" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Filesystem</text>
+      <text x="668" y="120" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">dest_root folder</text>
+
+      <!-- Library (backend) -->
+      <rect x="792" y="72" width="128" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="792" y="72" width="128" height="56" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <rect x="800" y="80" width="32" height="12" rx="2" fill="none" stroke="#33302a" stroke-opacity="0.40" stroke-width="0.8"/>
+      <text x="816" y="88" fill="#33302a" fill-opacity="0.8" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+      <text x="856" y="104" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Library</text>
+      <text x="856" y="120" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">destination library</text>
+
+      <!-- Legend -->
+      <line x1="40" y1="792" x2="920" y2="792" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+      <text x="40" y="808" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+      <rect x="40" y="824" width="4" height="16" fill="#33302a" fill-opacity="0.06" stroke="#6B6356" stroke-width="0.8"/>
+      <text x="52" y="836" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Activation (holds control)</text>
+
+      <line x1="204" y1="832" x2="232" y2="832" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="240" y="836" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Call / write</text>
+
+      <line x1="344" y1="832" x2="372" y2="832" stroke="#6B6356" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+      <text x="380" y="836" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Return / state read</text>
+
+      <line x1="516" y1="832" x2="544" y2="832" stroke="#5C6B3F" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <text x="552" y="836" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Child process spawn</text>
+
+      <line x1="688" y1="832" x2="716" y2="832" stroke="#B3502F" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <text x="724" y="836" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Atomic rename (focal)</text>
+    </svg>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error propagation · Flowchart</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #F6F3EC;
+      --color-ink:     #33302A;
+      --color-muted:   #6B6356;
+      --color-accent:  #B3502F;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1200px; width: 100%; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+    .sub { font-size: 0.9rem; color: var(--color-muted); margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Flowchart · Recurate</p>
+    <h1>Error propagation</h1>
+    <p class="sub">A failure tied to a user action gets a toast plus a log line; everything else is only logged, and five real cases show where each path surfaces.</p>
+
+    <svg viewBox="0 0 960 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="error-flow-title error-flow-desc">
+      <title id="error-flow-title">Error propagation</title>
+      <desc id="error-flow-desc">Flowchart showing that a failure tied to a user action is surfaced with app.toast_error or toast_warn and also logged with tracing, while background failures are only logged; examples include download failures, no audio match, the YouTube bot wall, caught decoder panics and missing tools.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#F6F3EC"/>
+
+      <!-- Arrows -->
+      <!-- start → decision -->
+      <line x1="216" y1="88" x2="216" y2="128" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- decision → toast (YES) -->
+      <line x1="312" y1="168" x2="544" y2="168" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- decision → log (NO) -->
+      <line x1="216" y1="208" x2="216" y2="248" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- toast → log (also logs) -->
+      <path d="M 544,184 H 288 Q 280,184 280,192 V 248" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- toast → examples -->
+      <path d="M 604,196 V 272 Q 604,280 596,280 H 496 Q 488,280 488,288 V 360" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="664" y1="196" x2="664" y2="360" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 724,196 V 272 Q 724,280 732,280 H 832 Q 840,280 840,288 V 360" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- log → examples -->
+      <path d="M 184,304 V 324 Q 184,332 176,332 H 136 Q 128,332 128,340 V 360" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 248,304 V 324 Q 248,332 256,332 H 296 Q 304,332 304,340 V 360" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Arrow labels -->
+      <rect x="416" y="148" width="24" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="428" y="156" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+      <rect x="224" y="220" width="24" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="236" y="228" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+      <rect x="392" y="192" width="56" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="420" y="200" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ALSO LOGS</text>
+
+      <!-- Start oval -->
+      <rect x="136" y="40" width="160" height="48" rx="24" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="216" y="68" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">A failure occurs</text>
+
+      <!-- Decision diamond -->
+      <polygon points="216,128 312,168 216,208 120,168" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <text x="216" y="164" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Tied to a</text>
+      <text x="216" y="180" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">user action?</text>
+
+      <!-- Toast step (focal) -->
+      <rect x="544" y="140" width="240" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="544" y="140" width="240" height="56" rx="6" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+      <text x="664" y="168" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">app.toast_error / toast_warn</text>
+      <text x="664" y="184" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">top-right · TTL 9 s / 6 s · manual ✕</text>
+
+      <!-- Log step -->
+      <rect x="116" y="248" width="200" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="116" y="248" width="200" height="56" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <text x="216" y="272" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">tracing::warn! / error!</text>
+      <text x="216" y="288" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">background failures: log only</text>
+
+      <!-- Example outcomes (terminal ovals) -->
+      <rect x="56" y="360" width="144" height="64" rx="24" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="128" y="384" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Decoder panic</text>
+      <text x="128" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">lofty / symphonia</text>
+      <text x="128" y="412" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">catch_unwind → Err</text>
+
+      <rect x="232" y="360" width="144" height="64" rx="24" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="304" y="384" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Tool missing</text>
+      <text x="304" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">yt-dlp / ffmpeg</text>
+      <text x="304" y="412" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">status pill red/amber</text>
+
+      <rect x="416" y="360" width="144" height="64" rx="24" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="488" y="384" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Download failed</text>
+      <text x="488" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">yt-dlp / ffmpeg error</text>
+      <text x="488" y="412" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">DownloadState::Failed</text>
+
+      <rect x="592" y="360" width="144" height="64" rx="24" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="664" y="384" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">No audio match</text>
+      <text x="664" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pasted title</text>
+      <text x="664" y="412" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">failure line + toast</text>
+
+      <rect x="768" y="360" width="144" height="64" rx="24" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="840" y="384" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bot wall / HTTP 403</text>
+      <text x="840" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">set cookies_browser</text>
+      <text x="840" y="412" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">hint in Replacer</text>
+
+      <!-- Legend -->
+      <line x1="40" y1="456" x2="920" y2="456" stroke="rgba(51,48,42,0.12)" stroke-width="0.8"/>
+      <text x="40" y="472" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+
+      <rect x="40" y="484" width="24" height="12" rx="6" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="72" y="492" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Start / outcome (oval)</text>
+
+      <rect x="212" y="484" width="24" height="12" rx="2" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <text x="244" y="492" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Step (rectangle)</text>
+
+      <polygon points="376,488 384,480 392,488 384,496" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <text x="404" y="492" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Decision (diamond)</text>
+
+      <rect x="540" y="484" width="24" height="12" rx="2" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+      <text x="572" y="492" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Focal: user-facing toast</text>
+
+      <line x1="712" y1="488" x2="740" y2="488" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="748" y="492" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Branch / example</text>
+    </svg>
+  </div>
+</body>
+</html>

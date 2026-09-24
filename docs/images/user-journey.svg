@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 544" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="user-journey-title user-journey-desc">
+      <title id="user-journey-title">Recurate user journey</title>
+      <desc id="user-journey-desc">User journey map across six stages, from launching the player through browsing, listening, curating, acquiring new audio, and settings, with sentiment dipping at Browse and lowest at Acquire where the yt-dlp bot wall forces a cookies setting.</desc>
+      <defs>
+        <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap');</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#F6F3EC"/>
+<text x="132" y="40" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">STAGE 1</text>
+<text x="132" y="60" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Launch</text>
+<text x="276" y="40" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">STAGE 2</text>
+<text x="276" y="60" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Browse</text>
+<text x="420" y="40" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">STAGE 3</text>
+<text x="420" y="60" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Listen</text>
+<text x="564" y="40" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">STAGE 4</text>
+<text x="564" y="60" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Curate</text>
+<text x="708" y="40" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">STAGE 5</text>
+<text x="708" y="60" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Acquire</text>
+<text x="852" y="40" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">STAGE 6</text>
+<text x="852" y="60" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Settings</text>
+<line x1="64" y1="100" x2="928" y2="100" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+<text x="56" y="104" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.10em">HIGH</text>
+<line x1="64" y1="180" x2="928" y2="180" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+<text x="56" y="184" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.10em">NEUTRAL</text>
+<line x1="64" y1="260" x2="928" y2="260" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+<text x="56" y="264" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.10em">LOW</text>
+<polyline points="132,180 276,220 420,100 564,140" fill="none" stroke="#6B6356" stroke-width="1.5" stroke-linejoin="round"/>
+<polyline points="564,140 708,260" fill="none" stroke="#B3502F" stroke-width="1.5"/>
+<polyline points="708,260 852,180" fill="none" stroke="#6B6356" stroke-width="1.5"/>
+<circle cx="132" cy="180" r="5" fill="#6B6356"/>
+<circle cx="276" cy="220" r="5" fill="#6B6356"/>
+<circle cx="420" cy="100" r="5" fill="#6B6356"/>
+<circle cx="564" cy="140" r="5" fill="#6B6356"/>
+<circle cx="708" cy="260" r="5" fill="#B3502F"/>
+<circle cx="852" cy="180" r="5" fill="#6B6356"/>
+<line x1="64" y1="280" x2="928" y2="280" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+<line x1="64" y1="368" x2="928" y2="368" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+<line x1="64" y1="416" x2="928" y2="416" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+<text x="60" y="328" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.06em">ACTIONS</text>
+<text x="60" y="396" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.06em">TOUCHPOINTS</text>
+<text x="60" y="444" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.06em">MODULES</text>
+<text x="132" y="300" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Run start.bat</text>
+<text x="132" y="316" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">library scans</text>
+<text x="276" y="300" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Pick Songs, Albums,</text>
+<text x="276" y="316" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Artists, Folders</text>
+<text x="420" y="300" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Click a song_row</text>
+<text x="420" y="316" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Space, Ctrl+arrows</text>
+<text x="564" y="300" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Delete, renumber,</text>
+<text x="564" y="316" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">dedupe, copy</text>
+<text x="708" y="300" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Search + replace,</text>
+<text x="708" y="316" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">import, paste links</text>
+<text x="852" y="300" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">Set paths, EQ,</text>
+<text x="852" y="316" fill="#33302A" font-size="12" font-weight="400" font-family="'Geist', sans-serif" text-anchor="middle">API key, cookies</text>
+<rect x="208" y="332" width="136" height="16" rx="2" fill="#b3502f" fill-opacity="0.08" stroke="#b3502f" stroke-opacity="0.50" stroke-width="0.8" stroke-dasharray="3,3"/>
+<text x="276" y="344" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">2,457 ROWS → 50/PAGE</text>
+<rect x="640" y="332" width="136" height="16" rx="2" fill="#b3502f" fill-opacity="0.08" stroke="#b3502f" stroke-opacity="0.50" stroke-width="0.8" stroke-dasharray="3,3"/>
+<text x="708" y="344" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">BOT WALL → COOKIES_BROWSER</text>
+<text x="132" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">status bar</text>
+<text x="276" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">top_bar · AllSongs</text>
+<text x="276" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">filter + sort</text>
+<text x="420" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">mini player</text>
+<text x="420" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">NowPlaying</text>
+<text x="564" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Folders · Duplicates</text>
+<text x="564" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Missing</text>
+<text x="708" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Replacer · Playlist</text>
+<text x="708" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Playlists</text>
+<text x="852" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Settings · Equalizer</text>
+<text x="132" y="436" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">main.rs · Library::scan</text>
+<text x="276" y="436" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">library.rs cached views</text>
+<text x="276" y="448" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">pagination 50/page</text>
+<text x="420" y="436" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">PlaybackController</text>
+<text x="420" y="448" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Engine</text>
+<text x="564" y="436" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">handle_delete · sync.rs</text>
+<text x="564" y="448" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">duplicates.rs</text>
+<text x="708" y="436" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">SearchWorker</text>
+<text x="708" y="448" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">DownloadWorker</text>
+<text x="852" y="436" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">settings.toml</text>
+<line x1="40" y1="488" x2="920" y2="488" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+<text x="40" y="504" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="start" letter-spacing="0.18em">LEGEND</text>
+<line x1="40" y1="520" x2="56" y2="520" stroke="#6B6356" stroke-width="1.5"/><circle cx="48" cy="520" r="3" fill="#6B6356"/>
+<text x="64" y="524" fill="#6B6356" font-size="8" font-weight="400" font-family="'Geist', sans-serif" text-anchor="start">Sentiment curve</text>
+<line x1="216" y1="520" x2="232" y2="520" stroke="#B3502F" stroke-width="1.5"/><circle cx="224" cy="520" r="3" fill="#B3502F"/>
+<text x="240" y="524" fill="#6B6356" font-size="8" font-weight="400" font-family="'Geist', sans-serif" text-anchor="start">Trough stage (Acquire)</text>
+<rect x="392" y="516" width="16" height="10" rx="2" fill="#b3502f" fill-opacity="0.08" stroke="#b3502f" stroke-opacity="0.50" stroke-width="0.8" stroke-dasharray="3,3"/>
+<text x="416" y="524" fill="#6B6356" font-size="8" font-weight="400" font-family="'Geist', sans-serif" text-anchor="start">Pain marker</text>
+
+    </svg>

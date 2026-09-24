@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recurate architecture · Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #F6F3EC;
+      --color-ink:     #33302A;
+      --color-muted:   #6B6356;
+      --color-accent:  #B3502F;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1200px; width: 100%; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+    .sub { font-size: 0.9rem; color: var(--color-muted); margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Recurate</p>
+    <h1>Recurate in one picture</h1>
+    <p class="sub">A single desktop process (egui window, controller and workers, core services, local storage) that reaches out only to yt-dlp, ffmpeg and the YouTube Data API.</p>
+
+    <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fullstack-architecture-title fullstack-architecture-desc">
+      <title id="fullstack-architecture-title">Recurate in one picture</title>
+      <desc id="fullstack-architecture-desc">Architecture diagram of the Recurate desktop player: the egui App drives the PlaybackController and the search and download workers, which use the Library and the Engine over local files and the cpal audio device, with yt-dlp, ffmpeg and the YouTube Data API as the only external dependencies outside the single process.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#F6F3EC"/>
+
+      <!-- Process boundary (everything but External runs in recurate.exe) -->
+      <rect x="64" y="40" width="640" height="480" rx="8" fill="rgba(51,48,42,0.02)" stroke="rgba(51,48,42,0.30)" stroke-width="1" stroke-dasharray="4,4"/>
+      <rect x="552" y="44" width="136" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="620" y="52" fill="rgba(51,48,42,0.50)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">ONE PROCESS · RECURATE.EXE</text>
+
+      <!-- External zone -->
+      <rect x="720" y="160" width="208" height="232" rx="8" fill="rgba(51,48,42,0.02)" stroke="rgba(51,48,42,0.10)" stroke-width="0.8"/>
+      <rect x="744" y="164" width="160" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="824" y="172" fill="rgba(51,48,42,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">EXTERNAL · OUTSIDE THE PROCESS</text>
+
+      <!-- Tier labels -->
+      <text x="120" y="64" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">UI · EGUI WINDOW</text>
+      <text x="120" y="184" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">COORDINATION</text>
+      <text x="120" y="304" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">CORE</text>
+      <text x="120" y="424" fill="#978C7B" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">STORAGE</text>
+
+      <!-- Arrows -->
+      <!-- e1 App → PlaybackController -->
+      <path d="M 300,128 V 152 Q 300,160 292,160 H 208 Q 200,160 200,168 V 192" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e2 App → Search + Download workers -->
+      <path d="M 420,128 V 152 Q 420,160 428,160 H 532 Q 540,160 540,168 V 192" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e3 App → Library -->
+      <path d="M 360,128 V 332 Q 360,340 368,340 H 440" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e4 PlaybackController → Engine -->
+      <line x1="176" y1="248" x2="176" y2="312" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e5 Engine → PlaybackController (events, return) -->
+      <line x1="224" y1="312" x2="224" y2="248" stroke="#6B6356" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <!-- e6 Engine → cpal audio device -->
+      <line x1="176" y1="368" x2="176" y2="432" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e7 Engine → Filesystem -->
+      <path d="M 280,356 H 292 Q 300,356 300,364 V 452 Q 300,460 308,460 H 420" fill="none" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e8 Library → Filesystem -->
+      <line x1="540" y1="368" x2="540" y2="432" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e9 workers → Library -->
+      <line x1="540" y1="248" x2="540" y2="312" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- e10 workers → yt-dlp + ffmpeg -->
+      <line x1="640" y1="208" x2="736" y2="208" stroke="#5C6B3F" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <!-- e11 workers → YouTube Data API (optional backend) -->
+      <path d="M 640,236 H 680 Q 688,236 688,244 V 332 Q 688,340 696,340 H 736" fill="none" stroke="#5C6B3F" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-link)"/>
+      <!-- e12 yt-dlp → Filesystem -->
+      <path d="M 896,220 H 904 Q 912,220 912,228 V 452 Q 912,460 904,460 H 660" fill="none" stroke="#5C6B3F" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+      <!-- Arrow labels -->
+      <rect x="220" y="140" width="60" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="248" y="148" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">PLAY_SONGS</text>
+      <rect x="424" y="140" width="116" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="480" y="148" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SEARCH · DOWNLOAD REQ</text>
+      <rect x="368" y="272" width="72" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="404" y="280" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">CACHED VIEWS</text>
+      <rect x="112" y="272" width="56" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="140" y="280" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENGINECMD</text>
+      <rect x="232" y="272" width="64" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="264" y="280" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENGINEEVENT</text>
+      <rect x="108" y="392" width="60" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="136" y="400" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">PCM · CPAL</text>
+      <rect x="308" y="400" width="100" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="360" y="408" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DECODE · SYMPHONIA</text>
+      <rect x="548" y="392" width="84" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="592" y="400" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WALKDIR · LOFTY</text>
+      <rect x="548" y="272" width="80" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="588" y="280" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">REFRESH_FOLDER</text>
+      <rect x="668" y="188" width="40" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="688" y="196" fill="#5C6B3F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SPAWN</text>
+      <rect x="696" y="280" width="80" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="736" y="288" fill="#5C6B3F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">UREQ · API KEY</text>
+      <rect x="720" y="440" width="116" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="780" y="448" fill="#5C6B3F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WRITE MP3 → DEST_PATH</text>
+
+      <!-- Nodes -->
+      <!-- App + screens (UI / input) -->
+      <rect x="240" y="72" width="240" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="240" y="72" width="240" height="56" rx="6" fill="rgba(107,99,86,0.10)" stroke="#978C7B" stroke-width="1"/>
+      <rect x="248" y="80" width="28" height="12" rx="2" fill="transparent" stroke="rgba(151,140,123,0.40)" stroke-width="0.8"/>
+      <text x="264" y="88" fill="#978C7B" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+      <text x="360" y="104" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">App + screens</text>
+      <text x="360" y="120" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ui::App · screens · mini player · toasts</text>
+
+      <!-- PlaybackController -->
+      <rect x="120" y="192" width="160" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="120" y="192" width="160" height="56" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <rect x="128" y="200" width="32" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+      <text x="144" y="208" fill="rgba(51,48,42,0.8)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CTRL</text>
+      <text x="200" y="224" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PlaybackController</text>
+      <text x="200" y="240" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">playback/ · Queue</text>
+
+      <!-- Search + Download workers -->
+      <rect x="440" y="192" width="200" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="440" y="192" width="200" height="56" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <rect x="448" y="200" width="44" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+      <text x="472" y="208" fill="rgba(51,48,42,0.8)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">WORKERS</text>
+      <text x="540" y="224" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SearchWorker · DownloadWorker</text>
+      <text x="540" y="240" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">4 + 3 threads · crossbeam channels</text>
+
+      <!-- Engine -->
+      <rect x="120" y="312" width="160" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="120" y="312" width="160" height="56" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <rect x="128" y="320" width="40" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+      <text x="148" y="328" fill="rgba(51,48,42,0.8)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">THREAD</text>
+      <text x="200" y="344" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Engine</text>
+      <text x="200" y="360" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">engine/ · decoder · EQ</text>
+
+      <!-- Library (focal) -->
+      <rect x="440" y="312" width="200" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="440" y="312" width="200" height="56" rx="6" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+      <rect x="448" y="320" width="32" height="12" rx="2" fill="transparent" stroke="rgba(179,80,47,0.50)" stroke-width="0.8"/>
+      <text x="464" y="328" fill="#B3502F" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+      <text x="540" y="344" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Library</text>
+      <text x="540" y="360" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">scan · refresh_folder · renumberer</text>
+
+      <!-- cpal audio device (store) -->
+      <rect x="120" y="432" width="160" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="120" y="432" width="160" height="56" rx="6" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="1"/>
+      <rect x="128" y="440" width="28" height="12" rx="2" fill="transparent" stroke="rgba(107,99,86,0.40)" stroke-width="0.8"/>
+      <text x="144" y="448" fill="#6B6356" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DEV</text>
+      <text x="200" y="464" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">cpal audio device</text>
+      <text x="200" y="480" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">output stream</text>
+
+      <!-- Filesystem (store) -->
+      <rect x="420" y="432" width="240" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="420" y="432" width="240" height="56" rx="6" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="1"/>
+      <rect x="428" y="440" width="28" height="12" rx="2" fill="transparent" stroke="rgba(107,99,86,0.40)" stroke-width="0.8"/>
+      <text x="440" y="448" fill="#6B6356" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FS</text>
+      <text x="540" y="464" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Filesystem</text>
+      <text x="540" y="480" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">music/ · music_original/ · settings.toml</text>
+
+      <!-- yt-dlp + ffmpeg (external) -->
+      <rect x="736" y="192" width="160" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="736" y="192" width="160" height="56" rx="6" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <rect x="744" y="200" width="32" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.22)" stroke-width="0.8"/>
+      <text x="760" y="208" fill="#978C7B" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PROC</text>
+      <text x="816" y="224" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">yt-dlp + ffmpeg</text>
+      <text x="816" y="240" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">on PATH · child processes</text>
+
+      <!-- YouTube Data API v3 (external) -->
+      <rect x="736" y="312" width="160" height="56" rx="6" fill="#F6F3EC"/>
+      <rect x="736" y="312" width="160" height="56" rx="6" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <rect x="744" y="320" width="32" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.22)" stroke-width="0.8"/>
+      <text x="760" y="328" fill="#978C7B" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HTTP</text>
+      <text x="816" y="344" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">YouTube Data API v3</text>
+      <text x="816" y="360" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">googleapis · API key</text>
+
+      <!-- Legend -->
+      <line x1="40" y1="544" x2="920" y2="544" stroke="rgba(51,48,42,0.12)" stroke-width="0.8"/>
+      <text x="40" y="560" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+      <rect x="40" y="572" width="24" height="12" rx="2" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+      <text x="72" y="580" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Focal: Library</text>
+
+      <rect x="160" y="572" width="24" height="12" rx="2" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <text x="192" y="580" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">In-process service</text>
+
+      <rect x="300" y="572" width="24" height="12" rx="2" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="1"/>
+      <text x="332" y="580" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Local storage / device</text>
+
+      <rect x="460" y="572" width="24" height="12" rx="2" fill="rgba(51,48,42,0.03)" stroke="rgba(51,48,42,0.30)" stroke-width="1"/>
+      <text x="492" y="580" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">External</text>
+
+      <line x1="560" y1="576" x2="588" y2="576" stroke="#5C6B3F" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <text x="596" y="580" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">External call / spawn</text>
+
+      <line x1="716" y1="576" x2="744" y2="576" stroke="#6B6356" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="752" y="580" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Return / optional</text>
+
+      <rect x="852" y="572" width="24" height="12" rx="2" fill="none" stroke="rgba(51,48,42,0.30)" stroke-width="1" stroke-dasharray="4,4"/>
+      <text x="884" y="580" fill="#6B6356" font-size="8" font-family="'Geist', sans-serif">Process</text>
+    </svg>
+  </div>
+</body>
+</html>

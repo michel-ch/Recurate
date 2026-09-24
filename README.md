@@ -49,6 +49,89 @@ thousands, and assumes flat folders.
 
 ---
 
+## Documentation
+
+### Stack
+
+| Layer          | Technology |
+|----------------|------------|
+| Database       | None — the filesystem is the store (`music/` destination root, `music_original/` source root; track order lives in the `NN - Title - Artist.mp3` prefix) plus `settings.toml` |
+| ORM            | — |
+| Backend        | Rust 2021, single desktop process: `crossbeam-channel` workers, `symphonia` decode, `cpal` output, `lofty` tags, `walkdir` scan, `renumberer` |
+| Frontend       | `eframe` / `egui` 0.28 immediate-mode UI (`ui::App`, screens, `song_row`, `mini_player`, toasts) |
+| Auth           | None for the app. Optional YouTube Data API v3 key (`YOUTUBE_API_KEY` or `[replacer] youtube_api_key`) for the API search backend |
+| External tools | `yt-dlp` and `ffmpeg` on PATH (child processes); YouTube Data API v3 over `ureq` (optional) |
+| Infra          | — (no Docker, no CI, no cloud; `start.bat` or `cargo run --release`) |
+
+### Architecture overview
+
+Recurate is one process. The egui `App` owns two `Library` instances (destination and read-only source), a `PlaybackController` that drives the `Engine` thread over crossbeam channels, and two pausable worker pools (`SearchWorker`, 4 threads; `DownloadWorker`, 3 threads) that talk to `yt-dlp`, `ffmpeg`, and optionally the YouTube Data API. Everything the app knows about music is derived from the filesystem, so `Library::refresh_folder` after every write is what keeps the screens honest.
+
+![Full-stack architecture](./docs/images/fullstack-architecture.svg)
+
+### Backend services
+
+The core modules are `Library` (scan, refresh, version counter), `Engine` (decode and output), `PlaybackController` (queue, shuffle, repeat), the two workers, and `renumberer` (contiguous `NN -` prefixes, two-phase temp rename). The workers are the only components that spawn processes or open network connections; the `link`-colored edges mark those boundaries.
+
+![Backend services](./docs/images/backend-services.svg)
+
+The same modules seen as layers, from the egui window down to the filesystem and the cpal audio device.
+
+![Backend architecture](./docs/images/backend-architecture.svg)
+
+### Main entity lifecycle
+
+The central unit of work is a `DownloadRequest` tracked by `DownloadState`. It is queued as `Pending`, and a worker thread runs `yt-dlp` to a hidden temp file, rewrites tags from the target filename, and atomically renames over `dest_path`; success is `Done`, any yt-dlp/ffmpeg error is `Failed{error}` and can be re-queued. Pausing the worker holds `Pending` items without changing their state.
+
+![Entity lifecycle](./docs/images/entity-lifecycle.svg)
+
+### Frontend structure
+
+All screens hang off one top bar; six of them (Now Playing, Settings, Replacer, Duplicates, Missing, Playlist) hide the mini player and carry a "← Back" button. There is no authentication gate.
+
+![Sitemap](./docs/images/sitemap.svg)
+
+`App::update` draws the top bar, one screen in the central panel, the mini player, and toasts every frame. Nodes tagged DATA read snapshots or cached views; VIEW nodes are pure rendering.
+
+![Component tree](./docs/images/component-tree.svg)
+
+A typical session runs launch → browse → listen → curate → acquire → settings. The two pain points that shaped the design are the 2,457-row library (hence pagination at 50 rows) and YouTube's bot wall (hence the cookies-from-browser setting).
+
+![User journey](./docs/images/user-journey.svg)
+
+The Playlists "Find & download" batch is the most stateful interaction in the UI: pasted lines are resolved on a background thread, duplicates park the batch behind a prompt, and the folder is renumbered once the last download lands.
+
+![UI state machine](./docs/images/ui-state-machine.svg)
+
+### Request lifecycle
+
+Clicking "Start replace top match" on the Replacer screen sends one `DownloadRequest` per matched song to the `DownloadWorker`. The worker spawns `yt-dlp` (with ffmpeg), rewrites tags with `lofty`, atomically renames the temp file over `dest_path`, calls `Library::refresh_folder`, and the screen reads `DownloadState` back through `read_states`.
+
+![Request lifecycle](./docs/images/request-lifecycle.svg)
+
+Failures split on one question: was the failure caused by a user action? If so it becomes a toast (error 9 s, warn 6 s, dismissible) in addition to the log line; otherwise it is logged only. Decoder panics from `lofty`/`symphonia` are caught and turned into errors so a single bad file never kills a worker thread.
+
+![Error flow](./docs/images/error-flow.svg)
+
+### Key architectural decisions
+
+- **Filesystem as the only source of truth.** No database or sidecar playlist files; order is the filename prefix and every write is followed by `Library::refresh_folder`. Trade-off: renames are the write path, so bulk reorders go through a two-phase temp rename in `renumberer`.
+- **Two roots instead of in-place replace.** `music_original/` is read-only and acts as the backup; downloads land in `music/` mirroring the folder layout. A failed download leaves the destination absent and the source untouched.
+- **Pausable, bounded worker pools over crossbeam channels.** Search runs 4-wide (network-bound), download 3-wide (ffmpeg CPU/disk bound). Pause is an `AtomicBool` polled with `recv_timeout`, so queued work survives a pause.
+- **Cached views keyed on `Library::version()`.** With ~2,500 songs, per-frame sorting and filtering caused visible lag; `App` caches library, replacer, folders, duplicates, and missing views and only rebuilds on a version bump. The Replacer screen deliberately has no per-song list.
+- **Audio-only enforcement in scoring.** `is_audio_candidate` drops music videos, live and lyric videos, and an empty result is treated as correct. Remix tags (Slowed, Reverb, Sped Up, Nightcore) are kept in the query and preferred in results.
+- **Panics caught at the decoder boundary.** `catch_unwind` wraps `lofty` tag reads, download jobs, and fingerprinting because malformed ID3v1 titles in CJK/Cyrillic files panic inside the parser.
+
+### What is not yet documented
+
+- **Database diagrams** — not applicable; there is no database, ORM, or cache server.
+- **Authentication flow** — not applicable; the app has no login, sessions, or tokens. The optional YouTube API key is a request parameter, not an auth flow.
+- **Real-time flow** — not applicable; all communication is in-process (channels), not WebSocket/SSE.
+- **CI/CD pipeline and deployment** — no `.github/workflows`, Docker, or cloud config exists. Share one to add Section 5.
+- **PNG exports** — diagrams are exported as SVG only because Playwright/Chromium is not installed on this machine (`pip install playwright && playwright install chromium` enables PNG). Editable sources are in `docs/diagrams/*.html`; the facts each diagram was drawn from are in `docs/diagrams/FACTS.md`.
+
+---
+
 ## Quick start
 
 ### Prerequisites

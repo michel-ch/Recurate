@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DownloadState lifecycle · State machine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #F6F3EC;
+      --color-ink:     #33302A;
+      --color-muted:   #6B6356;
+      --color-accent:  #B3502F;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1200px; width: 100%; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      color: var(--color-muted);
+      margin-bottom: 1.5rem;
+    }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">State machine · Recurate</p>
+    <h1>DownloadState lifecycle</h1>
+    <p class="subtitle">How one replacement DownloadRequest moves through the DownloadWorker, from enqueue to the atomic rename over dest_path.</p>
+
+    <svg viewBox="0 0 960 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="entity-lifecycle-title entity-lifecycle-desc">
+      <title id="entity-lifecycle-title">DownloadState lifecycle</title>
+      <desc id="entity-lifecycle-desc">State machine showing a download request moving from Idle to Pending, then to Done after yt-dlp and ffmpeg succeed and the file is renamed, or to Failed on error, from which it can be re-queued.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#F6F3EC"/>
+
+      <!-- Transitions (drawn first) -->
+      <!-- Start -> Idle -->
+      <line x1="68" y1="200" x2="120" y2="200" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Idle -> Pending : enqueue -->
+      <line x1="280" y1="200" x2="340" y2="200" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="288" y="180" width="48" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="312" y="188" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENQUEUE</text>
+
+      <!-- Pending -> Done : yt-dlp + ffmpeg ok, atomic rename (accent, happy path) -->
+      <line x1="500" y1="200" x2="596" y2="200" stroke="#B3502F" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <rect x="520" y="180" width="56" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="548" y="188" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">FFMPEG OK</text>
+      <rect x="508" y="208" width="80" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="548" y="216" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ATOMIC RENAME</text>
+
+      <!-- Pending -> Failed : yt-dlp / ffmpeg error -->
+      <line x1="392" y1="240" x2="392" y2="300" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="312" y="264" width="72" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="348" y="272" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">YT-DLP ERROR</text>
+
+      <!-- Failed -> Pending : re-queue -->
+      <line x1="448" y1="300" x2="448" y2="240" stroke="#6B6356" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="456" y="264" width="56" height="12" rx="2" fill="#F6F3EC"/>
+      <text x="484" y="272" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">RE-QUEUE</text>
+
+      <!-- Done -> End -->
+      <line x1="756" y1="200" x2="804" y2="200" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Callout: pause does not change state -->
+      <text x="420" y="88" fill="#33302A" font-size="12" font-style="italic" font-family="'Instrument Serif', serif" text-anchor="middle">Pause holds Pending items in the queue — the state does not change.</text>
+      <path d="M420,100 V152" fill="none" stroke="rgba(51,48,42,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+      <circle cx="420" cy="156" r="2" fill="#33302A"/>
+
+      <!-- Start dot -->
+      <circle cx="60" cy="200" r="6" fill="#33302A"/>
+
+      <!-- State: Idle -->
+      <rect x="120" y="160" width="160" height="80" rx="8" fill="#F6F3EC"/>
+      <rect x="120" y="160" width="160" height="80" rx="8" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <rect x="128" y="168" width="40" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+      <text x="148" y="176" fill="rgba(51,48,42,0.80)" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+      <text x="200" y="208" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Idle</text>
+      <text x="200" y="224" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">not queued</text>
+
+      <!-- State: Pending -->
+      <rect x="340" y="160" width="160" height="80" rx="8" fill="#F6F3EC"/>
+      <rect x="340" y="160" width="160" height="80" rx="8" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <rect x="348" y="168" width="40" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+      <text x="368" y="176" fill="rgba(51,48,42,0.80)" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+      <text x="420" y="208" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Pending</text>
+      <text x="420" y="224" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">in DownloadWorker queue</text>
+
+      <!-- State: Done (focal) -->
+      <rect x="596" y="160" width="160" height="80" rx="8" fill="#F6F3EC"/>
+      <rect x="596" y="160" width="160" height="80" rx="8" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+      <rect x="604" y="168" width="40" height="12" rx="2" fill="transparent" stroke="rgba(179,80,47,0.50)" stroke-width="0.8"/>
+      <text x="624" y="176" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+      <text x="676" y="208" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Done</text>
+      <text x="676" y="224" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">renamed over dest_path</text>
+
+      <!-- State: Failed{error} -->
+      <rect x="340" y="300" width="160" height="80" rx="8" fill="#F6F3EC"/>
+      <rect x="340" y="300" width="160" height="80" rx="8" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="1"/>
+      <rect x="348" y="308" width="40" height="12" rx="2" fill="transparent" stroke="rgba(107,99,86,0.50)" stroke-width="0.8"/>
+      <text x="368" y="316" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+      <text x="420" y="348" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Failed</text>
+      <text x="420" y="364" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">error: String → toast</text>
+
+      <!-- End ring dot -->
+      <circle cx="812" cy="200" r="8" fill="none" stroke="#33302A" stroke-width="1"/>
+      <circle cx="812" cy="200" r="5" fill="#33302A"/>
+
+      <!-- Legend strip -->
+      <line x1="32" y1="428" x2="928" y2="428" stroke="rgba(51,48,42,0.12)" stroke-width="0.8"/>
+      <text x="32" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+
+      <rect x="112" y="440" width="16" height="12" rx="2" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+      <text x="136" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">State</text>
+
+      <rect x="192" y="440" width="16" height="12" rx="2" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="1"/>
+      <text x="216" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">Error state</text>
+
+      <rect x="304" y="440" width="16" height="12" rx="2" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+      <text x="328" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">Focal — happy completion</text>
+
+      <line x1="496" y1="444" x2="528" y2="444" stroke="#6B6356" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="536" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">Transition</text>
+
+      <line x1="616" y1="444" x2="648" y2="444" stroke="#6B6356" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="656" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">User retry</text>
+
+      <circle cx="752" cy="444" r="4" fill="#33302A"/>
+      <text x="764" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">Start</text>
+
+      <circle cx="816" cy="444" r="6" fill="none" stroke="#33302A" stroke-width="1"/>
+      <circle cx="816" cy="444" r="3" fill="#33302A"/>
+      <text x="832" y="448" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">End</text>
+    </svg>
+  </div>
+</body>
+</html>

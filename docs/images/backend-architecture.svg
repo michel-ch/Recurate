@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 536" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="backend-architecture-title backend-architecture-desc">
+      <title id="backend-architecture-title">Recurate layer stack</title>
+      <desc id="backend-architecture-desc">Layer stack showing user input, UI, coordination, core services, external processes and storage in Recurate, with the coordination layer highlighted.</desc>
+      <defs>
+        <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');</style>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#F6F3EC"/>
+
+      <!-- Direction column (left margin) -->
+      <text x="56" y="52" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">USER</text>
+      <line x1="80" y1="64" x2="80" y2="440" stroke="#33302a" stroke-opacity="0.30" stroke-width="1"/>
+      <polygon points="76,440 84,440 80,448" fill="#6B6356"/>
+      <text x="48" y="468" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">DISK</text>
+
+      <!-- Stack outer silhouette -->
+      <line x1="120" y1="64" x2="920" y2="64" stroke="#33302a" stroke-opacity="0.30" stroke-width="1"/>
+      <line x1="120" y1="448" x2="920" y2="448" stroke="#33302a" stroke-opacity="0.30" stroke-width="1"/>
+
+      <!-- 01 User input -->
+      <rect x="120" y="64" width="800" height="64" fill="#ffffff"/>
+      <line x1="120" y1="128" x2="920" y2="128" stroke="#33302a" stroke-opacity="0.12" stroke-width="1"/>
+      <text x="136" y="100" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">01</text>
+      <text x="176" y="100" fill="#33302A" font-size="16" font-weight="600" font-family="'Geist', sans-serif">User input</text>
+      <text x="400" y="92" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">egui window · mouse · keyboard shortcuts</text>
+      <text x="400" y="108" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">Space · Ctrl+→ · Ctrl+← (gated on wants_keyboard_input)</text>
+
+      <!-- 02 UI -->
+      <rect x="120" y="128" width="800" height="64" fill="#F6F3EC"/>
+      <line x1="120" y1="192" x2="920" y2="192" stroke="#33302a" stroke-opacity="0.12" stroke-width="1"/>
+      <text x="136" y="164" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">02</text>
+      <text x="176" y="164" fill="#33302A" font-size="16" font-weight="600" font-family="'Geist', sans-serif">UI</text>
+      <text x="400" y="156" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">ui::App frame loop · screens · components</text>
+      <text x="400" y="172" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">toasts · cached views</text>
+
+      <!-- 03 Coordination (focal) -->
+      <rect x="120" y="192" width="800" height="64" fill="#b3502f" fill-opacity="0.08"/>
+      <rect x="120" y="192" width="800" height="64" fill="none" stroke="#B3502F" stroke-width="1"/>
+      <text x="136" y="228" fill="#B3502F" font-size="8" font-weight="600" font-family="'Geist Mono', monospace" letter-spacing="0.14em">03</text>
+      <text x="176" y="228" fill="#33302A" font-size="16" font-weight="600" font-family="'Geist', sans-serif">Coordination</text>
+      <text x="400" y="220" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">PlaybackController · SearchWorker · DownloadWorker · ResolveJob</text>
+      <text x="400" y="236" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">fingerprint workers · scan threads — crossbeam channels / Arc&lt;RwLock&gt;</text>
+
+      <!-- 04 Core services -->
+      <rect x="120" y="256" width="800" height="64" fill="#ffffff"/>
+      <line x1="120" y1="320" x2="920" y2="320" stroke="#33302a" stroke-opacity="0.12" stroke-width="1"/>
+      <text x="136" y="292" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">04</text>
+      <text x="176" y="292" fill="#33302A" font-size="16" font-weight="600" font-family="'Geist', sans-serif">Core services</text>
+      <text x="400" y="284" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">Library · renumberer · Engine · data::{tags, fingerprint, duplicates}</text>
+      <text x="400" y="300" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">replacer::{title_cleaner, scoring, download, playlist, sync}</text>
+
+      <!-- 05 External processes / network -->
+      <rect x="120" y="320" width="800" height="64" fill="#F6F3EC"/>
+      <line x1="120" y1="384" x2="920" y2="384" stroke="#33302a" stroke-opacity="0.12" stroke-width="1"/>
+      <text x="136" y="356" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">05</text>
+      <text x="176" y="356" fill="#33302A" font-size="16" font-weight="600" font-family="'Geist', sans-serif">External</text>
+      <text x="400" y="348" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">yt-dlp · ffmpeg (subprocess, on PATH)</text>
+      <text x="400" y="364" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">YouTube Data API v3 (ureq, optional backend)</text>
+
+      <!-- 06 Storage -->
+      <rect x="120" y="384" width="800" height="64" fill="#ffffff"/>
+      <text x="136" y="420" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">06</text>
+      <text x="176" y="420" fill="#33302A" font-size="16" font-weight="600" font-family="'Geist', sans-serif">Storage</text>
+      <text x="400" y="412" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">filesystem: destination root music/ · source root music_original/</text>
+      <text x="400" y="428" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">settings.toml · cpal audio device</text>
+
+      <!-- Legend strip -->
+      <line x1="32" y1="488" x2="928" y2="488" stroke="#33302a" stroke-opacity="0.12" stroke-width="0.8"/>
+      <text x="32" y="508" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+
+      <rect x="112" y="500" width="16" height="12" rx="2" fill="#ffffff" stroke="#33302a" stroke-opacity="0.30" stroke-width="1"/>
+      <text x="136" y="508" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">Layer (alternating paper / white)</text>
+
+      <rect x="336" y="500" width="16" height="12" rx="2" fill="#b3502f" fill-opacity="0.08" stroke="#B3502F" stroke-width="1"/>
+      <text x="360" y="508" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">Focal layer — thread hand-off seam</text>
+
+      <line x1="576" y1="504" x2="608" y2="504" stroke="#33302a" stroke-opacity="0.30" stroke-width="1"/>
+      <polygon points="608,500 608,508 616,504" fill="#6B6356"/>
+      <text x="624" y="508" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace">Direction: user → disk</text>
+    </svg>

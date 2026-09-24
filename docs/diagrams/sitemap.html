@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Every screen and how you reach it — Recurate</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #F6F3EC;
+      --color-ink: #33302A;
+      --color-muted: #6B6356;
+      --color-accent: #B3502F;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1040px; width: 100%; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+      letter-spacing: -0.02em; line-height: 1.15; color: var(--color-ink); margin-bottom: 0.5rem; }
+    .subtitle { font-size: 0.9rem; color: var(--color-muted); margin-bottom: 1.5rem; max-width: 60ch; }
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Sitemap · Recurate</p>
+    <h1>Every screen and how you reach it</h1>
+    <p class="subtitle">The top bar reaches eleven pages; list pages open detail pages, the mini player opens Now Playing, and six pages take the whole window.</p>
+
+    <svg viewBox="0 0 960 504" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sitemap-title sitemap-desc">
+      <title id="sitemap-title">Recurate sitemap</title>
+      <desc id="sitemap-desc">Tree of Recurate screens: the window holds a top bar and mini player; the top bar opens list pages, hub pages, and full-screen pages that hide the mini player, while the mini player opens Now Playing.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#F6F3EC"/>
+<text x="40" y="92" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="start" letter-spacing="0.18em">TIER 0 · WINDOW</text>
+<text x="40" y="188" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="start" letter-spacing="0.18em">TIER 1 · CHROME</text>
+<path d="M 480 112 L 480 128 Q 480 136 472 136 L 328 136 Q 320 136 320 144 L 320 160" fill="none" stroke="#6B6356" stroke-width="1"/>
+<path d="M 480 136 L 848 136 Q 856 136 856 144 L 856 160" fill="none" stroke="#6B6356" stroke-width="1"/>
+<path d="M 320 208 L 320 224 Q 320 232 312 232 L 148 232 Q 140 232 140 240 L 140 256" fill="none" stroke="#6B6356" stroke-width="1"/>
+<path d="M 320 232 L 376 232 Q 384 232 384 240 L 384 256" fill="none" stroke="#6B6356" stroke-width="1"/>
+<path d="M 320 232 L 640 232 Q 648 232 648 240 L 648 256" fill="none" stroke="#6B6356" stroke-width="1"/>
+<line x1="140" y1="320" x2="140" y2="352" stroke="#6B6356" stroke-width="1"/>
+<line x1="648" y1="320" x2="648" y2="352" stroke="#6B6356" stroke-width="1"/>
+<line x1="856" y1="208" x2="856" y2="256" stroke="#6B6356" stroke-width="1"/>
+<rect x="360" y="64" width="240" height="48" rx="6" fill="#F6F3EC"/>
+<rect x="360" y="64" width="240" height="48" rx="6" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+<rect x="368" y="72" width="32" height="12" rx="2" fill="transparent" stroke="rgba(179,80,47,0.50)" stroke-width="0.8"/>
+<text x="384" y="81" fill="#B3502F" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROOT</text>
+<text x="480" y="96" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Recurate window</text>
+<rect x="240" y="160" width="160" height="48" rx="6" fill="#F6F3EC"/>
+<rect x="240" y="160" width="160" height="48" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+<rect x="248" y="168" width="28" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+<text x="262" y="177" fill="#33302A" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">NAV</text>
+<text x="320" y="192" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Top bar</text>
+<rect x="776" y="160" width="160" height="48" rx="6" fill="#F6F3EC"/>
+<rect x="776" y="160" width="160" height="48" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+<rect x="784" y="168" width="44" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+<text x="806" y="177" fill="#33302A" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLAYER</text>
+<text x="856" y="192" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Mini player</text>
+<rect x="40" y="256" width="200" height="64" rx="6" fill="#F6F3EC"/>
+<rect x="40" y="256" width="200" height="64" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+<rect x="48" y="264" width="40" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+<text x="68" y="273" fill="#33302A" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LISTS</text>
+<text x="140" y="284" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Songs · Albums · Artists</text>
+<text x="140" y="300" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">AllSongs · AlbumsList · ArtistsList</text>
+<rect x="264" y="256" width="240" height="64" rx="6" fill="#F6F3EC"/>
+<rect x="264" y="256" width="240" height="64" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+<rect x="272" y="264" width="40" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+<text x="292" y="273" fill="#33302A" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PAGES</text>
+<text x="384" y="284" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Folders · Playlists · Queue</text>
+<text x="384" y="300" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">hub pages · mini player stays</text>
+<rect x="528" y="256" width="240" height="64" rx="6" fill="#F6F3EC"/>
+<rect x="528" y="256" width="240" height="64" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+<rect x="536" y="264" width="80" height="12" rx="2" fill="transparent" stroke="rgba(51,48,42,0.40)" stroke-width="0.8"/>
+<text x="576" y="273" fill="#33302A" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FULL · ← BACK</text>
+<text x="648" y="292" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Replacer · Missing · Playlist</text>
+<text x="648" y="308" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Duplicates · Settings</text>
+<rect x="792" y="256" width="128" height="64" rx="6" fill="#F6F3EC"/>
+<rect x="792" y="256" width="128" height="64" rx="6" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="0.8"/>
+<rect x="800" y="264" width="80" height="12" rx="2" fill="transparent" stroke="rgba(107,99,86,0.50)" stroke-width="0.8"/>
+<text x="840" y="273" fill="#6B6356" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FULL · ← BACK</text>
+<text x="856" y="284" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">NowPlaying</text>
+<text x="856" y="300" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Now Playing button</text>
+<rect x="40" y="352" width="200" height="64" rx="6" fill="#F6F3EC"/>
+<rect x="40" y="352" width="200" height="64" rx="6" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="0.8"/>
+<rect x="48" y="360" width="44" height="12" rx="2" fill="transparent" stroke="rgba(107,99,86,0.50)" stroke-width="0.8"/>
+<text x="70" y="369" fill="#6B6356" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DETAIL</text>
+<text x="140" y="388" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Search · AlbumDetail</text>
+<text x="140" y="404" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">ArtistDetail</text>
+<text x="140" y="420" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">search field · list rows</text>
+<rect x="568" y="352" width="160" height="64" rx="6" fill="#F6F3EC"/>
+<rect x="568" y="352" width="160" height="64" rx="6" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="0.8"/>
+<rect x="576" y="360" width="44" height="12" rx="2" fill="transparent" stroke="rgba(107,99,86,0.50)" stroke-width="0.8"/>
+<text x="598" y="369" fill="#6B6356" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SCREEN</text>
+<text x="648" y="380" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Equalizer</text>
+<text x="648" y="396" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Settings → Open as screen</text>
+<line x1="40" y1="448" x2="920" y2="448" stroke="rgba(51,48,42,0.12)" stroke-width="0.8"/>
+<text x="40" y="464" fill="#6B6356" font-size="8" font-family="'Geist Mono', monospace" text-anchor="start" letter-spacing="0.18em">LEGEND</text>
+<rect x="40" y="476" width="16" height="10" rx="2" fill="rgba(179,80,47,0.08)" stroke="#B3502F" stroke-width="1"/>
+<text x="64" y="484" fill="#6B6356" font-size="8" font-weight="400" font-family="'Geist', sans-serif" text-anchor="start">Window root</text>
+<rect x="184" y="476" width="16" height="10" rx="2" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
+<text x="208" y="484" fill="#6B6356" font-size="8" font-weight="400" font-family="'Geist', sans-serif" text-anchor="start">Nav group with mini player</text>
+<rect x="376" y="476" width="16" height="10" rx="2" fill="rgba(51,48,42,0.05)" stroke="#6B6356" stroke-width="0.8"/>
+<text x="400" y="484" fill="#6B6356" font-size="8" font-weight="400" font-family="'Geist', sans-serif" text-anchor="start">Reached from a parent screen</text>
+<rect x="584" y="476" width="16" height="10" rx="2" fill="transparent" stroke="rgba(179,80,47,0.50)" stroke-width="0.8"/>
+<text x="608" y="484" fill="#6B6356" font-size="8" font-weight="400" font-family="'Geist', sans-serif" text-anchor="start">FULL: no mini player, ← Back returns</text>
+
+    </svg>
+  </div>
+</body>
+</html>
