@@ -17,7 +17,7 @@ use crate::ui::App;
 static WORKER: Lazy<Arc<SearchWorker>> = Lazy::new(|| Arc::new(SearchWorker::start()));
 static DOWNLOAD: OnceCell<Arc<DownloadWorker>> = OnceCell::new();
 
-fn download_worker(library: Arc<Library>) -> &'static Arc<DownloadWorker> {
+pub(crate) fn download_worker(library: Arc<Library>) -> &'static Arc<DownloadWorker> {
     DOWNLOAD.get_or_init(|| Arc::new(DownloadWorker::start(library)))
 }
 

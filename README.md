@@ -37,6 +37,8 @@ search, score, download, replace, dedupe, and renumber.
 |---|---|---|
 | **Player** | working | Native egui player: scan, play, queue, EQ, delete, renumber. |
 | **Replacer (embedded)** | working | YouTube search → audio-only filter → score → yt-dlp download → ID3 tag → atomic replace. Runs **inside** Recurate on its own screen. |
+| **Playlists** | working | Every destination folder is a playlist: create, add songs by link or title, reorder (drag / buttons / position), delete, duplicate check. |
+| **Playlist import** | working | Paste a YouTube playlist link → new numbered folder. |
 
 The dataset this is built for: **2,457 mp3 files across 22 flat folders**,
 with naming patterns ranging from clean album tracks to bot-wall-defeating
@@ -69,6 +71,10 @@ cd player
 cargo run --release
 ```
 
+On Windows, double-click `start.bat` in the repo root instead: it builds the
+release binary if needed (or launches the prebuilt one when cargo isn't
+installed) and opens the app.
+
 Default scan root is `<cwd>/music`, so launching from `player/` picks up
 `player/music/`. Settings persist at
 `%APPDATA%/Recurate/Recurate/settings.toml` after first save.
@@ -77,7 +83,7 @@ Default scan root is `<cwd>/music`, so launching from `player/` picks up
 
 ```bash
 cargo check --all-targets   # Type-check everything (lib + bin + tests)
-cargo test                  # 50 tests across 5 suites
+cargo test                  # 68 tests across 5 suites
 ```
 
 The test suites are pure unit / integration tests — they don't touch
@@ -207,6 +213,41 @@ no transcode. Use it once after pointing at a fresh destination, then
 run the Replacer to upgrade individual tracks.
 
 ![Missing](docs/screenshots/missing.png)
+
+### Playlists
+
+Every folder in the destination root is a playlist. The Playlists hub
+lists them on the left (**＋ New** creates an empty folder) and edits the
+selected one on the right:
+
+- **Add songs** — paste one entry per line: a YouTube video or playlist
+  link, or a plain title such as `Powfu death bed`. Titles are resolved to
+  the best audio-only match with the same scoring the Replacer uses; lines
+  with no audio-only result are shown in red and skipped. Downloads are
+  named `NN - Title - Artist.mp3` continuing the folder's numbering and the
+  folder is renumbered once the batch finishes.
+- **Order** — drag rows by the ☰ handle, use ▲ ▼ / ⇱ First / ⇲ Last, or
+  type a track number and target position. Nothing touches disk until
+  **Apply order**, which rewrites the `NN - ` prefixes with the
+  renumberer's two-phase rename.
+- **Duplicates** — if a pasted line resolves to a song already in the playlist
+  (same title and artist), a dialog lists them and lets you skip or download
+  anyway.
+- **Delete** — ✕ on a row deletes the file and renumbers the folder. Apply or
+  revert pending order edits first.
+
+### Playlist
+
+Download a whole YouTube playlist as new library content. Paste a
+playlist link, click **Fetch** (one `yt-dlp --flat-playlist` call, no
+downloads yet), optionally rename the target folder (defaults to the
+playlist title), then click **Download N tracks**. Files land in
+`<destination root>/<folder>/NN - Title - Artist.mp3` in playlist order,
+so track sorting, tag override and the renumberer treat them like any
+other album folder. Tracks already on disk are skipped, so re-running on
+an updated playlist only fetches the new entries. Uses the same 3-wide
+pausable download worker as the Replacer and the same
+`cookies_browser` setting for bot-detection walls.
 
 ### Duplicates
 
@@ -407,7 +448,8 @@ Recurate/
     │   ├── engine/       # symphonia decoder + cpal output + EQ
     │   ├── playback/     # PlaybackController, Queue, deletion
     │   ├── replacer/     # title cleaner, YouTube search, scoring,
-    │   │                 # yt-dlp+ffmpeg download, search/download workers
+    │   │                 # yt-dlp+ffmpeg download, search/download workers,
+    │   │                 # playlist fetch, pasted-line parser + resolver
     │   ├── ui/           # App, screens, components, toasts
     │   └── renumberer.rs # Track-number normalizer
     ├── tests/            # Integration tests (renumberer, library_dedup)

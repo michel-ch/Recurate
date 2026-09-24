@@ -181,6 +181,7 @@ pub enum Screen {
     Replacer,
     Duplicates,
     Missing,
+    Playlist,
     Settings,
 }
 
@@ -193,6 +194,7 @@ impl Screen {
                 | Screen::Replacer
                 | Screen::Duplicates
                 | Screen::Missing
+                | Screen::Playlist
         )
     }
 }

@@ -1,5 +1,8 @@
 pub mod download;
 pub mod download_worker;
+pub mod link_list;
+pub mod playlist;
+pub mod resolve;
 pub mod scoring;
 pub mod search_worker;
 pub mod sync;

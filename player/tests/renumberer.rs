@@ -129,3 +129,56 @@ fn renumber_pad_width_scales() {
         .unwrap();
     assert_eq!(max, 11, "11 remaining files numbered 1..=11");
 }
+
+#[test]
+fn plan_order_renames_to_requested_positions() {
+    let dir = tempfile::tempdir().unwrap();
+    for name in ["01 - A - X.mp3", "02 - B - X.mp3", "03 - C - X.mp3"] {
+        std::fs::write(dir.path().join(name), b"x").unwrap();
+    }
+    let ordered = vec![
+        dir.path().join("03 - C - X.mp3"),
+        dir.path().join("01 - A - X.mp3"),
+        dir.path().join("02 - B - X.mp3"),
+    ];
+    let plan = recurate::renumberer::plan_order(dir.path(), &ordered).unwrap();
+    assert_eq!(plan.changes(), 3);
+    recurate::renumberer::apply(&plan).unwrap();
+    let mut names: Vec<String> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+        .collect();
+    names.sort();
+    assert_eq!(names, vec!["01 - C - X.mp3", "02 - A - X.mp3", "03 - B - X.mp3"]);
+}
+
+#[test]
+fn plan_order_rejects_missing_file() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("01 - A - X.mp3"), b"x").unwrap();
+    let bogus = vec![dir.path().join("nope.mp3")];
+    assert!(recurate::renumberer::plan_order(dir.path(), &bogus).is_err());
+}
+
+#[test]
+fn next_index_counts_audio_files_and_pad() {
+    let dir = tempfile::tempdir().unwrap();
+    assert_eq!(recurate::renumberer::next_index(dir.path()), (1, 2));
+    for i in 1..=9 {
+        std::fs::write(dir.path().join(format!("0{i} - T - A.mp3")), b"x").unwrap();
+    }
+    assert_eq!(recurate::renumberer::next_index(dir.path()), (10, 2));
+}
+
+#[test]
+fn numbering_ignores_in_flight_dot_files() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("01 - A - X.mp3"), b"x").unwrap();
+    std::fs::write(dir.path().join(".02 - B - X.dl.mp3"), b"x").unwrap();
+    assert_eq!(recurate::renumberer::next_index(dir.path()), (2, 2));
+    let plan =
+        recurate::renumberer::plan_order(dir.path(), &[dir.path().join("01 - A - X.mp3")]).unwrap();
+    assert_eq!(plan.total_audio, 1);
+    assert!(recurate::renumberer::plan_order(dir.path(), &[dir.path().join(".02 - B - X.dl.mp3")])
+        .is_err());
+}
