@@ -23,6 +23,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 song_row::RowOptions {
                     show_remove: true,
                     remove_hover: Some("Remove from queue"),
+                    ..Default::default()
                 },
             );
             if row.clicked {

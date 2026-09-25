@@ -186,15 +186,8 @@ pub enum Screen {
 }
 
 impl Screen {
-    pub fn shows_bottom_nav(&self) -> bool {
-        !matches!(
-            self,
-            Screen::NowPlaying
-                | Screen::Settings
-                | Screen::Replacer
-                | Screen::Duplicates
-                | Screen::Missing
-                | Screen::Playlist
-        )
+    /// The mini player is hidden only on Now Playing, which *is* the player.
+    pub fn shows_mini_player(&self) -> bool {
+        !matches!(self, Screen::NowPlaying)
     }
 }

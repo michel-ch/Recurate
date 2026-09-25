@@ -8,6 +8,11 @@
 
 use std::time::{Duration, Instant};
 
+use egui::{vec2, Frame, Margin, Rect, RichText, Rounding, Stroke};
+
+use crate::ui::theme::{self, Palette};
+use crate::ui::widgets;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToastLevel {
     Info,
@@ -24,19 +29,20 @@ impl ToastLevel {
         }
     }
 
-    fn color(self) -> egui::Color32 {
+    fn color(self, pal: &Palette) -> egui::Color32 {
         match self {
-            ToastLevel::Info => egui::Color32::from_rgb(60, 110, 180),
-            ToastLevel::Warn => egui::Color32::from_rgb(180, 130, 40),
-            ToastLevel::Error => egui::Color32::from_rgb(180, 60, 60),
+            ToastLevel::Info => pal.accent,
+            ToastLevel::Warn => pal.caution,
+            ToastLevel::Error => pal.critical,
         }
     }
 
-    fn icon(self) -> &'static str {
+    /// Leading word, so the level never rests on colour alone.
+    fn word(self) -> &'static str {
         match self {
-            ToastLevel::Info => "ℹ",
-            ToastLevel::Warn => "⚠",
-            ToastLevel::Error => "✖",
+            ToastLevel::Info => "Info",
+            ToastLevel::Warn => "Warning",
+            ToastLevel::Error => "Error",
         }
     }
 }
@@ -58,54 +64,73 @@ impl Toast {
     }
 }
 
-/// Render the toast stack as a floating area pinned to the top-right of the
-/// screen. Returns the indices of toasts that the user dismissed; the caller
-/// removes them from `toasts` after the closure returns (avoiding mutation
-/// during iteration). Expired toasts are dropped here as well.
+/// Render the toast stack pinned to the top-right of the window. Expired
+/// toasts are dropped here; dismissed ones are removed after the loop so
+/// indices stay valid during iteration.
 pub fn draw(ctx: &egui::Context, toasts: &mut Vec<Toast>) {
     let now = Instant::now();
     toasts.retain(|t| t.expires_at > now);
     if toasts.is_empty() {
         return;
     }
+    let pal = theme::pal(ctx);
 
     let mut to_remove: Vec<usize> = Vec::new();
     egui::Area::new(egui::Id::new("toast_area"))
-        .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 56.0))
+        .anchor(egui::Align2::RIGHT_TOP, vec2(-theme::SPACE_5, theme::SPACE_4))
         .order(egui::Order::Foreground)
         .interactable(true)
         .show(ctx, |ui| {
-            ui.set_max_width(360.0);
+            ui.set_width(280.0);
             for (i, toast) in toasts.iter().enumerate() {
-                let frame = egui::Frame::popup(ui.style())
-                    .stroke(egui::Stroke::new(1.5, toast.level.color()))
-                    .inner_margin(egui::Margin::symmetric(10.0, 8.0));
-                frame.show(ui, |ui| {
-                    ui.horizontal_top(|ui| {
-                        ui.label(
-                            egui::RichText::new(toast.level.icon())
-                                .color(toast.level.color())
-                                .strong(),
-                        );
-                        ui.add(egui::Label::new(&toast.message).wrap());
-                        ui.with_layout(
-                            egui::Layout::right_to_left(egui::Align::TOP),
-                            |ui| {
-                                if ui
-                                    .small_button("✕")
-                                    .on_hover_text("Dismiss")
-                                    .clicked()
-                                {
-                                    to_remove.push(i);
-                                }
-                            },
-                        );
-                    });
-                });
-                ui.add_space(4.0);
+                let resp = Frame::none()
+                    .fill(pal.surface)
+                    .stroke(Stroke::new(1.0, pal.line_strong))
+                    .rounding(Rounding::same(theme::RADIUS))
+                    .inner_margin(Margin {
+                        left: theme::SPACE_4,
+                        right: theme::SPACE_2,
+                        top: theme::SPACE_2,
+                        bottom: theme::SPACE_2,
+                    })
+                    .show(ui, |ui| {
+                        ui.set_width(280.0 - theme::SPACE_4 - theme::SPACE_2);
+                        ui.horizontal_top(|ui| {
+                            ui.vertical(|ui| {
+                                ui.set_width(280.0 - 64.0);
+                                ui.spacing_mut().item_spacing.y = 2.0;
+                                ui.label(
+                                    widgets::strong(toast.level.word(), theme::TEXT_CAPTION)
+                                        .color(toast.level.color(&pal)),
+                                );
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(&toast.message)
+                                            .size(theme::TEXT_CAPTION)
+                                            .color(pal.ink_2),
+                                    )
+                                    .wrap(),
+                                );
+                            });
+                            if widgets::icon_button(ui, "✕", 24.0, pal.ink_3)
+                                .on_hover_text("Dismiss")
+                                .clicked()
+                            {
+                                to_remove.push(i);
+                            }
+                        });
+                    })
+                    .response;
+                // 2px level edge on the left.
+                let edge = Rect::from_min_size(
+                    resp.rect.min + vec2(0.0, theme::SPACE_2),
+                    vec2(2.0, resp.rect.height() - 2.0 * theme::SPACE_2),
+                );
+                ui.painter()
+                    .rect_filled(edge, Rounding::same(1.0), toast.level.color(&pal));
+                ui.add_space(theme::SPACE_1);
             }
         });
-    // Remove from highest index downward so earlier indices stay valid.
     to_remove.sort_unstable_by(|a, b| b.cmp(a));
     for i in to_remove {
         if i < toasts.len() {
@@ -133,5 +158,12 @@ mod tests {
     fn toast_new_sets_expiry_in_future() {
         let t = Toast::new(ToastLevel::Info, "hi");
         assert!(t.expires_at > Instant::now());
+    }
+
+    #[test]
+    fn every_level_has_a_word() {
+        for l in [ToastLevel::Info, ToastLevel::Warn, ToastLevel::Error] {
+            assert!(!l.word().is_empty());
+        }
     }
 }

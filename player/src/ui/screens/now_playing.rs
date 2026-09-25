@@ -29,7 +29,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
         ui.label(egui::RichText::new(&song.album).weak());
         ui.add_space(20.0);
 
-        if let Some(target) = draw_seek_slider(ui, &state) {
+        if let Some(target) = draw_seek_slider(ui, &state, 480.0, true) {
             app.playback.seek_fraction(target);
         }
         ui.label(format_position(state.current_position_ms, state.duration_ms));

@@ -13,8 +13,9 @@ use crate::domain::{sort_songs, Screen, Song, SortOption};
 use crate::playback::PlaybackController;
 use crate::replacer::SearchBackend;
 use crate::settings::Settings;
-use crate::ui::components::{mini_player, top_bar};
+use crate::ui::components::{mini_player, sidebar};
 use crate::ui::fonts;
+use crate::ui::theme;
 use crate::ui::screens;
 use crate::ui::screens::playlist::PlaylistUi;
 use crate::ui::screens::playlists::PlaylistsUi;
@@ -94,7 +95,7 @@ impl App {
         playback: Arc<PlaybackController>,
         settings: Arc<RwLock<Settings>>,
     ) -> Self {
-        fonts::install_unicode_fallbacks(&cc.egui_ctx);
+        fonts::install(&cc.egui_ctx);
         let initial_volume = settings.read().playback.volume;
         playback.set_volume(initial_volume);
         let initial_source_root = settings.read().scan.source_root.clone();
@@ -194,7 +195,9 @@ impl App {
     /// responsible for not invoking this when `has_active_async_op` is false.
     fn draw_status_bar(&self, ui: &mut egui::Ui) {
         use crate::data::LibraryStatus;
+        use crate::ui::widgets;
 
+        let pal = theme::pal(ui.ctx());
         let mut parts: Vec<String> = Vec::new();
         if matches!(self.library.status(), LibraryStatus::Scanning) {
             parts.push(format!(
@@ -208,15 +211,25 @@ impl App {
                 self.source.song_count()
             ));
         }
-        if self.fingerprint_running.load(Ordering::Relaxed) {
-            let total = self.fingerprint_total.load(Ordering::Relaxed);
-            let done = self.fingerprint_progress.load(Ordering::Relaxed);
+        let fingerprinting = self.fingerprint_running.load(Ordering::Relaxed);
+        let (done, total) = (
+            self.fingerprint_progress.load(Ordering::Relaxed),
+            self.fingerprint_total.load(Ordering::Relaxed),
+        );
+        if fingerprinting {
             parts.push(format!("Fingerprinting {done}/{total}"));
         }
-        ui.horizontal(|ui| {
-            ui.add_space(8.0);
-            ui.spinner();
-            ui.label(egui::RichText::new(parts.join("  ·  ")).weak());
+        ui.horizontal_centered(|ui| {
+            // A single slow pulse, not a spinner.
+            let t = ui.input(|i| i.time) as f32;
+            let alpha = 0.35 + 0.65 * (0.5 + 0.5 * (t * std::f32::consts::TAU / 1.2).sin());
+            let (dot, _) = ui.allocate_exact_size(egui::vec2(8.0, 8.0), egui::Sense::hover());
+            ui.painter()
+                .circle_filled(dot.center(), 3.0, pal.accent.gamma_multiply(alpha));
+            ui.label(widgets::mono(parts.join("  ·  "), theme::TEXT_MICRO).color(pal.ink_3));
+            if fingerprinting && total > 0 {
+                widgets::progress_bar(ui, 120.0, done as f32 / total as f32);
+            }
         });
     }
 
@@ -545,7 +558,11 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        let theme_mode = self.settings.read().ui.theme;
+        theme::ensure(ctx, theme::wants_dark(theme_mode, frame.info().system_theme));
+        let pal = theme::pal(ctx);
+
         if self.screen != self.previous_screen {
             if matches!(self.screen, Screen::Missing) {
                 self.cached_missing = None;
@@ -558,51 +575,88 @@ impl eframe::App for App {
             ctx.request_repaint_after(std::time::Duration::from_millis(250));
         }
 
-        egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
-            top_bar::draw(ui, self);
-        });
-
-        if self.screen.shows_bottom_nav() {
-            egui::TopBottomPanel::bottom("mini_player").show(ctx, |ui| {
-                mini_player::draw(ui, self);
-            });
+        // Bottom panels are declared before the sidebar so they span the full
+        // window width, under the sidebar.
+        if self.screen.shows_mini_player() {
+            egui::TopBottomPanel::bottom("mini_player")
+                .exact_height(72.0)
+                .frame(
+                    egui::Frame::none()
+                        .fill(pal.surface)
+                        .inner_margin(egui::Margin::symmetric(theme::SPACE_4, 0.0)),
+                )
+                .show(ctx, |ui| {
+                    mini_player::draw(ui, self);
+                });
         }
-        // Status bar sits just above the mini-player (or at the bottom when
-        // mini-player is hidden) and only renders when an async op is live —
-        // we check the precondition before declaring the panel so the bar
-        // takes zero vertical space when idle.
+        // Status bar sits just above the mini player and only renders while
+        // an async op is live, so it takes no space when idle.
         if self.has_active_async_op() {
             egui::TopBottomPanel::bottom("status_bar")
-                .show_separator_line(false)
+                .exact_height(24.0)
+                .frame(
+                    egui::Frame::none()
+                        .fill(pal.surface)
+                        .inner_margin(egui::Margin::symmetric(theme::SPACE_4, 0.0)),
+                )
                 .show(ctx, |ui| {
                     self.draw_status_bar(ui);
                 });
-            // Status updates come from atomics that won't trigger repaints
-            // on their own; nudge egui so the spinner animates and the bar
-            // disappears promptly when the op finishes.
-            ctx.request_repaint_after(std::time::Duration::from_millis(300));
+            // Status updates come from atomics that won't trigger repaints on
+            // their own; keep the pulse moving and let the bar disappear
+            // promptly when the op finishes.
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
+
+        egui::SidePanel::left("sidebar")
+            .exact_width(200.0)
+            .resizable(false)
+            .frame(
+                egui::Frame::none()
+                    .fill(pal.surface)
+                    .inner_margin(egui::Margin::symmetric(theme::SPACE_2, theme::SPACE_4)),
+            )
+            .show(ctx, |ui| {
+                sidebar::draw(ui, self);
+            });
 
         toasts::draw(ctx, &mut self.toasts);
 
-        egui::CentralPanel::default().show(ctx, |ui| match self.screen.clone() {
-            Screen::Library => screens::library::draw(ui, self),
-            Screen::AllSongs => screens::library::draw(ui, self),
-            Screen::AlbumsList => screens::library::draw_albums(ui, self),
-            Screen::AlbumDetail(album) => screens::library::draw_album_detail(ui, self, &album),
-            Screen::ArtistsList => screens::library::draw_artists(ui, self),
-            Screen::ArtistDetail(artist) => screens::library::draw_artist_detail(ui, self, &artist),
-            Screen::Folders => screens::library::draw_folders(ui, self),
-            Screen::Playlists => screens::playlists::draw(ui, self),
-            Screen::NowPlaying => screens::now_playing::draw(ui, self),
-            Screen::Equalizer => screens::settings::draw_equalizer(ui, self),
-            Screen::Search => screens::library::draw_search(ui, self),
-            Screen::Queue => screens::queue::draw(ui, self),
-            Screen::Replacer => screens::replacer::draw(ui, self),
-            Screen::Duplicates => screens::duplicates::draw(ui, self),
-            Screen::Missing => screens::missing::draw(ui, self),
-            Screen::Playlist => screens::playlist::draw(ui, self),
-            Screen::Settings => screens::settings::draw(ui, self),
-        });
+        egui::CentralPanel::default()
+            .frame(egui::Frame::none().fill(pal.paper).inner_margin(egui::Margin {
+                left: theme::SPACE_5,
+                right: theme::SPACE_5,
+                top: theme::SPACE_4,
+                bottom: theme::SPACE_4,
+            }))
+            .show(ctx, |ui| {
+                // --w-app: content stays a wide paragraph, never full-bleed.
+                // (`set_max_width` can widen the ui, so cap it at what's there.)
+                let w = ui.available_width().min(theme::W_APP);
+                ui.set_max_width(w);
+                match self.screen.clone() {
+                    Screen::Library => screens::library::draw(ui, self),
+                    Screen::AllSongs => screens::library::draw(ui, self),
+                    Screen::AlbumsList => screens::library::draw_albums(ui, self),
+                    Screen::AlbumDetail(album) => {
+                        screens::library::draw_album_detail(ui, self, &album)
+                    }
+                    Screen::ArtistsList => screens::library::draw_artists(ui, self),
+                    Screen::ArtistDetail(artist) => {
+                        screens::library::draw_artist_detail(ui, self, &artist)
+                    }
+                    Screen::Folders => screens::library::draw_folders(ui, self),
+                    Screen::Playlists => screens::playlists::draw(ui, self),
+                    Screen::NowPlaying => screens::now_playing::draw(ui, self),
+                    Screen::Equalizer => screens::settings::draw_equalizer(ui, self),
+                    Screen::Search => screens::library::draw_search(ui, self),
+                    Screen::Queue => screens::queue::draw(ui, self),
+                    Screen::Replacer => screens::replacer::draw(ui, self),
+                    Screen::Duplicates => screens::duplicates::draw(ui, self),
+                    Screen::Missing => screens::missing::draw(ui, self),
+                    Screen::Playlist => screens::playlist::draw(ui, self),
+                    Screen::Settings => screens::settings::draw(ui, self),
+                }
+            });
     }
 }

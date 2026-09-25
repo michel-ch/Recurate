@@ -1,3 +1,3 @@
 pub mod mini_player;
+pub mod sidebar;
 pub mod song_row;
-pub mod top_bar;

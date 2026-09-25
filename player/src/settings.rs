@@ -16,6 +16,8 @@ pub struct Settings {
     pub renumber: RenumberSettings,
     #[serde(default)]
     pub replacer: ReplacerSettings,
+    #[serde(default)]
+    pub ui: UiSettings,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +116,22 @@ pub struct ReplacerSettings {
     pub cookies_browser: String,
 }
 
+/// Colour scheme preference. `System` follows the OS light/dark setting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ThemeMode {
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiSettings {
+    #[serde(default)]
+    pub theme: ThemeMode,
+}
+
 impl Settings {
     pub fn load_or_default() -> Self {
         match Self::load() {
@@ -145,7 +163,12 @@ impl Settings {
         Ok(())
     }
 
+    /// `RECURATE_CONFIG_DIR` overrides the config folder (tools and tests use
+    /// it so they can never write the user's real settings).
     pub fn config_path() -> Result<PathBuf> {
+        if let Some(dir) = std::env::var_os("RECURATE_CONFIG_DIR") {
+            return Ok(PathBuf::from(dir).join("settings.toml"));
+        }
         let dirs = ProjectDirs::from("dev", "Recurate", "Recurate")
             .context("could not resolve config directory")?;
         Ok(dirs.config_dir().join("settings.toml"))

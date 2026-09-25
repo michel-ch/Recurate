@@ -74,6 +74,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                     song_row::RowOptions {
                         show_remove: true,
                         remove_hover: Some("Delete"),
+                        ..Default::default()
                     },
                 );
                 if row.clicked {
@@ -227,6 +228,7 @@ pub fn draw_folders(ui: &mut egui::Ui, app: &mut App) {
                         song_row::RowOptions {
                             show_remove: true,
                             remove_hover: Some("Delete"),
+                            ..Default::default()
                         },
                     );
                     if row.clicked {

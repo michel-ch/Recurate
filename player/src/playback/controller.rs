@@ -44,6 +44,21 @@ impl PlaybackController {
         self.queue.read().clone()
     }
 
+    /// Queue length without cloning the queue (sidebar count, every frame).
+    pub fn queue_len(&self) -> usize {
+        self.queue.read().items.len()
+    }
+
+    /// Up to `n` songs after the current one, plus how many remain in total.
+    /// Cheap enough for per-frame use; the full `queue_snapshot` is not.
+    pub fn upcoming(&self, n: usize) -> (Vec<Song>, usize) {
+        let q = self.queue.read();
+        let start = q.current.map(|c| c + 1).unwrap_or(0);
+        let remaining = q.items.len().saturating_sub(start);
+        let songs = q.items.iter().skip(start).take(n).cloned().collect();
+        (songs, remaining)
+    }
+
     pub fn play_songs(&self, mut songs: Vec<Song>, start_index: usize, sort: Option<SortOption>) {
         if let Some(opt) = sort {
             crate::domain::sort_songs(&mut songs, opt);
