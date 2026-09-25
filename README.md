@@ -60,7 +60,7 @@ thousands, and assumes flat folders.
 | Database       | None — the filesystem is the store (`music/` destination root, `music_original/` source root; track order lives in the `NN - Title - Artist.mp3` prefix) plus `settings.toml` |
 | ORM            | — |
 | Backend        | Rust 2021, single desktop process: `crossbeam-channel` workers, `symphonia` decode, `cpal` output, `lofty` tags, `walkdir` scan, `renumberer` |
-| Frontend       | `eframe` / `egui` 0.28 immediate-mode UI (`ui::App`, screens, `song_row`, `mini_player`, toasts) |
+| Frontend       | `eframe` / `egui` 0.28 immediate-mode UI (`ui::App`, sidebar, screens, `song_row`, `mini_player`, toasts); design tokens in `ui/theme.rs`, light and dark; folder picker via `rfd` |
 | Auth           | None for the app. Optional YouTube Data API v3 key (`YOUTUBE_API_KEY` or `[replacer] youtube_api_key`) for the API search backend |
 | External tools | `yt-dlp` and `ffmpeg` on PATH (child processes); YouTube Data API v3 over `ureq` (optional) |
 | Infra          | — (no Docker, no CI, no cloud; `start.bat` or `cargo run --release`) |
@@ -89,11 +89,11 @@ The central unit of work is a `DownloadRequest` tracked by `DownloadState`. It i
 
 ### Frontend structure
 
-All screens hang off one top bar; six of them (Now Playing, Settings, Replacer, Duplicates, Missing, Playlist) hide the mini player and carry a "← Back" button. There is no authentication gate.
+Every screen is one click away in the left sidebar (Library: Songs, Albums, Artists, Folders, Queue; Curate: Playlists, Replacer, Import playlist, Duplicates, Missing; Settings at the bottom). The mini player stays on every screen except Now Playing. There is no authentication gate. 
 
 ![Sitemap](./docs/images/sitemap.svg)
 
-`App::update` draws the top bar, one screen in the central panel, the mini player, and toasts every frame. Nodes tagged DATA read snapshots or cached views; VIEW nodes are pure rendering.
+`App::update` re-checks the theme, then draws the sidebar, one screen in the central panel, the mini player, the status bar when a scan or fingerprint pass is running, and toasts every frame. Nodes tagged DATA read snapshots or cached views; VIEW nodes are pure rendering.
 
 ![Component tree](./docs/images/component-tree.svg)
 
@@ -158,7 +158,9 @@ cargo run --release
 
 On Windows, double-click `start.bat` in the repo root instead: it builds the
 release binary if needed (or launches the prebuilt one when cargo isn't
-installed) and opens the app.
+installed) and opens the app. Release builds open only the app window, with
+no console behind it; debug builds keep the console so log output is
+visible. A prebuilt `Recurate.exe` is attached to each GitHub release.
 
 Default scan root is `<cwd>/music`, so launching from `player/` picks up
 `player/music/`. Settings persist at
@@ -198,7 +200,9 @@ the moment you leave the Settings page.
 
 ## The screens
 
-The top bar has buttons for every screen. Below is a tour with workflows.
+The sidebar on the left reaches every screen. The look follows the OS
+light/dark setting (change it under Settings → Appearance). Below is a tour
+with workflows.
 
 ### Songs
 
@@ -367,10 +371,12 @@ sequence stays contiguous.
 
 ![Settings](docs/screenshots/settings.png)
 
-Library paths, renumber threshold, replacer backend, API key, cookies
-browser. The API key is stored locally in `settings.toml`; a
-`YOUTUBE_API_KEY` environment variable, if set, takes precedence and is
-never persisted.
+Library paths (each with a **Browse…** button that opens the Windows folder
+picker; the full path is always shown), renumber threshold, equalizer,
+API key, cookies browser, and Appearance (match Windows, light, dark). The
+footer counts unsaved changes with Discard and Save. The API key is stored
+locally in `settings.toml`; a `YOUTUBE_API_KEY` environment variable, if
+set, takes precedence and is never persisted.
 
 ### Equalizer
 
@@ -461,6 +467,9 @@ source_root = "C:/Users/you/Music_original"
 [playback]
 volume = 0.7
 
+[ui]
+theme = "system"   # system | light | dark
+
 [renumber]
 enabled = true
 threshold = 0.5  # fraction of files in folder that need a NN- prefix
@@ -525,6 +534,8 @@ reason. The full path goes to the log if you want details.
 Recurate/
 ├── README.md             # This file
 ├── .gitignore
+├── start.bat             # Build-if-needed launcher
+├── assets/               # Logo (SVG, PNG sizes, ICO)
 ├── docs/
 │   ├── diagrams/         # Architecture diagram sources (HTML)
 │   ├── images/           # Diagram exports (SVG) referenced from this README
@@ -541,8 +552,11 @@ Recurate/
     │   ├── replacer/     # title cleaner, YouTube search, scoring,
     │   │                 # yt-dlp+ffmpeg download, search/download workers,
     │   │                 # playlist fetch, pasted-line parser + resolver
-    │   ├── ui/           # App, screens, components, toasts
+    │   ├── ui/           # App, theme (design tokens), widgets, sidebar,
+    │   │                 # mini player, screens, toasts
     │   └── renumberer.rs # Track-number normalizer
+    ├── assets/           # Bundled fonts (OFL) and the app icon
+    ├── examples/         # capture_screenshots: regenerates docs/screenshots
     ├── tests/            # Integration tests (renumberer, library_dedup)
     ├── music/            # Destination root (gitignored)
     └── music_original/   # Source root, read-only catalog (gitignored)

@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Repository state
 
-**Player working with an embedded Replacer (search + download + atomic replace into a destination root), a Playlist import page, and a Playlists hub (folder = playlist: add by link/title, reorder, delete); Python Replacer not started.** Layout:
+**Player working with an embedded Replacer (search + download + atomic replace into a destination root), a Playlist import page, a Playlists hub (folder = playlist: add by link/title, reorder, delete), and a token-driven UI (sidebar shell, light/dark theme, bundled fonts, YD logo as window/exe icon); Python Replacer not started.** Layout:
 
 ```
 Youtube/
@@ -81,6 +81,8 @@ These are the design points most likely to be missed by re-deriving from the dat
 
 19. **Screenshots must never show personal paths.** `docs/screenshots/*.png` are regenerated only with `cargo run --release --example capture_screenshots` (from `player/`). The tool exposes the library through directory junctions under `C:\RecurateDemo\` and keeps its `settings.toml` there, so every path on screen reads `C:\RecurateDemo\Music\…`; `Capture::privacy_check` refuses to write any image while a library root or the config path is outside that folder. Never capture screenshots by hand (Snipping Tool etc.) for the docs, never point the tool at the real roots, and keep the guard when editing the tool. The README section "Updating screenshots" describes the workflow for humans.
 
+20. **Every colour and font comes from `ui/theme.rs`; screens never hardcode a `Color32`.** The design tokens (`docs/claude-design.md` on disk, gitignored) map onto egui in `theme::apply`; `theme::ensure` runs every frame because eframe resets `Visuals` when the OS theme flips. `theme::pal(ctx)` hands the current `Palette` to any widget. Shared widgets (`ui/widgets.rs`: buttons, inputs, path field, cards, pills, sliders, toggle, modal) are the building blocks; new UI composes them. Disabled buttons go through `widgets::disabled_button`, not `ui.add_enabled`: egui fades disabled widgets towards a colour that is transparent for secondary buttons, which made them vanish. Fonts (Inter, Newsreader, JetBrains Mono, static instances cut from the variable fonts because egui cannot pick a weight) are bundled under `assets/fonts` with their OFL licences; Windows CJK and symbol fonts stay as fallbacks. The `[ui] theme` setting is `system | light | dark`. Settings → Library paths use `rfd` for the folder dialog, run on a worker thread so the window keeps painting; the result is polled each frame from `SettingsUi.picker`.
+
 ## Commands
 
 ### Player (Rust, exists)
@@ -99,7 +101,7 @@ export YOUTUBE_API_KEY='AIza…'           # Git Bash; set/$env: equivalents on 
 cargo run --release                      # Then pick "YouTube Data API v3" in Replacer screen
 ```
 
-Default scan root resolves to `player/music/` when run from `player/`. Settings live at `%APPDATA%/MusicSuite/Player/settings.toml` (auto-created on first save). The API key resolution order is: `YOUTUBE_API_KEY` env var (highest precedence, never persisted) → `settings.toml`'s `[replacer] youtube_api_key` (UI-set in Settings → Replacer, password field). The same Settings → Replacer panel exposes `[replacer] cookies_browser` (free-text: `chrome` / `firefox` / `edge` / `brave` / …; empty = off) which yt-dlp reads via `--cookies-from-browser` to bypass YouTube's bot-detection wall. Close the named browser before retrying — Chrome/Edge lock their cookie DB while running. If a user pastes their key into the Settings field it persists locally to settings.toml. Backups land at `<first_scan_root>/../backup/`, e.g. `player/backup/`. yt-dlp and ffmpeg must be on PATH for the download/replace flow; the Replacer screen's top status pill turns red/amber when either is missing.
+Default scan root resolves to `player/music/` when run from `player/`. Settings live at `%APPDATA%/Recurate/Recurate/config/settings.toml` (auto-created on first save; `RECURATE_CONFIG_DIR` overrides the folder, used by the screenshot tool). The API key resolution order is: `YOUTUBE_API_KEY` env var (highest precedence, never persisted) → `settings.toml`'s `[replacer] youtube_api_key` (UI-set in Settings → Replacer, password field). The same Settings → Replacer panel exposes `[replacer] cookies_browser` (free-text: `chrome` / `firefox` / `edge` / `brave` / …; empty = off) which yt-dlp reads via `--cookies-from-browser` to bypass YouTube's bot-detection wall. Close the named browser before retrying — Chrome/Edge lock their cookie DB while running. If a user pastes their key into the Settings field it persists locally to settings.toml. yt-dlp and ffmpeg must be on PATH for the download/replace flow; the Replacer screen's top status pill turns red/amber when either is missing.
 
 ### Replacer (Python, not started)
 

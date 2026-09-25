@@ -1,6 +1,6 @@
 # Recurate — full app context for UI redesign
 
-Purpose of this file: give a designer everything needed to design a new UI for Recurate without reading the Rust source. It describes what the app is, who uses it, every screen, every control, every piece of state a screen shows, and the constraints the new UI must respect. The current UI is a functional but plain egui (immediate-mode) desktop interface; the redesign is free to change layout, visual language, navigation and grouping, but must keep every listed action reachable.
+Purpose of this file: give a designer (human or Claude Design) everything needed to design a new UI for Recurate without reading the Rust source. It describes what the app is, who uses it, every screen, every control, every piece of state a screen shows, and the constraints the new UI must respect. The current UI is a functional but plain egui (immediate-mode) desktop interface; the redesign is free to change layout, visual language, navigation and grouping, but must keep every listed action reachable.
 
 ---
 
@@ -59,19 +59,24 @@ Every subfolder of the destination root is a playlist. Track order inside a play
 ## 3. Global window layout (current)
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│ Recurate │ Songs Albums Artists Folders Playlists Queue Replacer │
-│          │ Missing Playlist Duplicates │ Settings      2457 songs │  ← top bar
+┌──────────┬───────────────────────────────────────────────────────┐
+│ YD Recurate │                                                    │
+│ LIBRARY  │                                                       │
+│  Songs   │                  current screen                       │
+│  Albums  │                                                       │
+│  …       │                                                       │
+│ CURATE   │                                                       │
+│  …       │                                                       │
+│ Settings │                                                       │
+│ 2 457 songs · 22 folders                                         │
+├──────────┴───────────────────────────────────────────────────────┤
+│ ● Fingerprinting 120/2457 ▬▬▬                                    │  ← status bar (conditional)
 ├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│                        current screen                            │
-│                                                                  │
-├──────────────────────────────────────────────────────────────────┤
-│ ⏮ ▶ ⏭  [======seek======] 1:23 / 3:45  Vol [====]  Now Playing  │  ← mini player
-├──────────────────────────────────────────────────────────────────┤
-│ ◌ Scanning library… (812 so far)  ·  Fingerprinting 120/2457     │  ← status bar (conditional)
+│ ♫ Title / artist · folder   ⇄ ⏮ (▶) ⏭ ↻   0:00 ▬▬▬ 2:57  🔈▬ Now Playing │  ← mini player 72px
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+The 200 px sidebar replaced the earlier top tab strip; screens still keep their own "← Back" buttons where their bodies have not been restyled yet.
 
 - Top bar: app name, one selectable tab per screen (active tab highlighted), Settings button, total song count right-aligned.
 - Mini player is hidden on "full-screen" screens: Now Playing, Settings, Replacer, Duplicates, Missing, Playlist. Those screens carry their own "← Back" button.
@@ -203,7 +208,7 @@ Same as Songs without pagination: header "Search", the same live filter, full vi
   - **Renumber**: checkbox "Renumber after delete", slider "Prefix threshold" 0–1 (folders with fewer prefixed files than this fraction are skipped).
   - **Equalizer**: checkbox "Enable equalizer", 10 vertical band sliders −12..+12 dB labelled with Hz, "Bass boost (dB)" slider 0–12. Also reachable as its own screen.
   - **Replacer**: YouTube Data API v3 key (password field; env var `YOUTUBE_API_KEY` overrides), Cookies-from-browser free text (`chrome` / `firefox` / `edge` / `brave`; empty = off) used to bypass YouTube's "confirm you're not a bot" wall; hint that the browser must be closed.
-  - `Save settings` button. Settings persist at `%APPDATA%/MusicSuite/Player/settings.toml`.
+  - Footer: unsaved-change count, `Discard`, `Save settings`. Header: Appearance picker (match Windows / light / dark). Library path fields show the full absolute path and each has a `Browse…` button opening the native folder picker. Settings persist at `%APPDATA%/Recurate/Recurate/config/settings.toml`.
 
 ---
 
