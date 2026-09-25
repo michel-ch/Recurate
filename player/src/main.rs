@@ -1,3 +1,7 @@
+// No console window in release builds; logs still go to stderr when run
+// from a terminal in debug builds.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
