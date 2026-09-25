@@ -118,7 +118,8 @@ impl eframe::App for Capture {
                 });
                 if let Some(image) = shot {
                     let path = self.out_dir.join(format!("{}.png", self.shots[i].0));
-                    match save_png(&image, &path) {
+                    let result = self.privacy_check().and_then(|()| save_png(&image, &path));
+                    match result {
                         Ok(()) => println!("saved {}", path.display()),
                         Err(e) => eprintln!("failed {}: {e:#}", path.display()),
                     }
@@ -136,6 +137,27 @@ impl eframe::App for Capture {
 }
 
 impl Capture {
+    /// Refuse to write an image unless every path the app can display comes
+    /// from the demo root. This is what keeps the Windows user name out of
+    /// the published screenshots; do not remove it.
+    fn privacy_check(&self) -> Result<()> {
+        let s = self.inner.settings.read();
+        let roots = s.scan.roots.iter().chain(std::iter::once(&s.scan.source_root));
+        for r in roots {
+            anyhow::ensure!(
+                r.starts_with(DEMO_ROOT),
+                "refusing to save: library path {r:?} is not under {DEMO_ROOT}"
+            );
+        }
+        let cfg = Settings::config_path()?;
+        anyhow::ensure!(
+            cfg.starts_with(DEMO_ROOT),
+            "refusing to save: settings path {} is not under {DEMO_ROOT}",
+            cfg.display()
+        );
+        Ok(())
+    }
+
     fn enter(&mut self, i: usize) {
         let screen = self.shots[i].1.clone();
         if screen == Screen::Playlists {
