@@ -31,6 +31,8 @@ crossbeam-channel = "0.5"
 parking_lot = "0.12"
 
 ureq = { version = "2", features = ["json", "tls"] }
+# Native folder picker (Settings -> Library paths).
+rfd = "0.16"
 urlencoding = "2"
 
 tracing = "0.1"

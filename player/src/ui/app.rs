@@ -19,6 +19,7 @@ use crate::ui::theme;
 use crate::ui::screens;
 use crate::ui::screens::playlist::PlaylistUi;
 use crate::ui::screens::playlists::PlaylistsUi;
+use crate::ui::screens::settings::SettingsUi;
 use crate::ui::toasts::{self, Toast, ToastLevel};
 
 pub const PAGE_SIZE: usize = 50;
@@ -85,6 +86,7 @@ pub struct App {
     pub toasts: Vec<Toast>,
     pub playlist: PlaylistUi,
     pub playlists: PlaylistsUi,
+    pub settings_ui: SettingsUi,
 }
 
 impl App {
@@ -106,6 +108,7 @@ impl App {
             .first()
             .cloned()
             .unwrap_or_default();
+        let settings_ui = SettingsUi::new(&settings.read());
         Self {
             library,
             source,
@@ -139,6 +142,7 @@ impl App {
             toasts: Vec::new(),
             playlist: PlaylistUi::default(),
             playlists: PlaylistsUi::default(),
+            settings_ui,
         }
     }
 

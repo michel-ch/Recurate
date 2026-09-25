@@ -160,17 +160,18 @@ fn styled_button(ui: &mut Ui, enabled: bool, text: &str, kind: Kind, height: f32
         w.active.weak_bg_fill = press;
         w.active.bg_stroke = border(pal.accent);
         w.active.fg_stroke = Stroke::new(1.0, ink);
-        // Disabled buttons keep their shape; egui fades them.
-        w.noninteractive.weak_bg_fill = rest;
-        w.noninteractive.bg_fill = rest;
-        w.noninteractive.bg_stroke = border(pal.line);
-        w.noninteractive.fg_stroke = Stroke::new(1.0, ink);
+        // Disabled = the same button at 45% opacity (see `disabled_button`).
+        w.noninteractive.weak_bg_fill = rest.gamma_multiply(DISABLED_OPACITY);
+        w.noninteractive.bg_fill = rest.gamma_multiply(DISABLED_OPACITY);
+        w.noninteractive.bg_stroke = border(pal.line_strong);
+        w.noninteractive.fg_stroke = Stroke::new(1.0, ink.gamma_multiply(DISABLED_OPACITY));
         let label = if kind == Kind::Secondary {
             RichText::new(text).size(theme::TEXT_BODY)
         } else {
             strong(text, theme::TEXT_BODY)
         };
-        ui.add_enabled(
+        disabled_button(
+            ui,
             enabled,
             egui::Button::new(label)
                 .min_size(vec2(0.0, height))
@@ -178,6 +179,23 @@ fn styled_button(ui: &mut Ui, enabled: bool, text: &str, kind: Kind, height: f32
         )
     })
     .inner
+}
+
+const DISABLED_OPACITY: f32 = 0.45;
+
+/// Add `button`, clickable only when `enabled`.
+///
+/// Deliberately not `ui.add_enabled`: egui fades disabled widgets towards
+/// `noninteractive.weak_bg_fill`, and when that colour is transparent (as for
+/// a secondary button) egui skips painting the widget entirely. A hover-only
+/// sense gives the same "can't click" behaviour and lets the noninteractive
+/// visuals set by the caller draw it at reduced opacity.
+fn disabled_button(ui: &mut Ui, enabled: bool, button: egui::Button<'_>) -> Response {
+    if enabled {
+        ui.add(button)
+    } else {
+        ui.add(button.sense(Sense::hover()))
+    }
 }
 
 /// Terracotta filled button: the one thing the screen wants you to do.
@@ -239,10 +257,17 @@ pub fn mini_button(ui: &mut Ui, enabled: bool, glyph: &str) -> Response {
         ui.spacing_mut().button_padding = vec2(theme::SPACE_1 + 2.0, 0.0);
         let w = &mut ui.visuals_mut().widgets;
         w.inactive.bg_stroke = Stroke::new(1.0, pal.line);
+        w.noninteractive.weak_bg_fill = Color32::TRANSPARENT;
         w.noninteractive.bg_stroke = Stroke::new(1.0, pal.line);
-        ui.add_enabled(
+        let ink = if enabled {
+            pal.ink_2
+        } else {
+            pal.ink_2.gamma_multiply(DISABLED_OPACITY)
+        };
+        disabled_button(
+            ui,
             enabled,
-            egui::Button::new(RichText::new(glyph).size(theme::TEXT_MICRO).color(pal.ink_2))
+            egui::Button::new(RichText::new(glyph).size(theme::TEXT_MICRO).color(ink))
                 .min_size(vec2(24.0, 24.0))
                 .rounding(Rounding::same(theme::RADIUS_SM)),
         )
@@ -319,6 +344,40 @@ pub fn password_input(ui: &mut Ui, value: &mut String, hint: &str, width: f32) -
 /// Filter input with a leading `⌕`.
 pub fn search_input(ui: &mut Ui, value: &mut String, hint: &str, width: f32) -> Response {
     framed_edit(ui, value, hint, width, Some("⌕"), false, false)
+}
+
+/// Folder path field: monospace, wraps instead of scrolling so the whole path
+/// is always visible, and never accepts a newline (Enter does nothing, pasted
+/// line breaks are dropped). `id` lets the caller check focus beforehand.
+pub fn path_input(
+    ui: &mut Ui,
+    id: egui::Id,
+    value: &mut String,
+    hint: &str,
+    width: f32,
+) -> Response {
+    let pal = p(ui);
+    let focused = ui.memory(|m| m.has_focus(id));
+    let mut resp = input_frame(ui, focused)
+        .show(ui, |ui| {
+            ui.add(
+                TextEdit::multiline(value)
+                    .id(id)
+                    .frame(false)
+                    .font(theme::mono(theme::TEXT_CAPTION))
+                    .hint_text(RichText::new(hint).color(pal.ink_3))
+                    .desired_rows(1)
+                    .desired_width((width - 2.0 * theme::SPACE_2).max(40.0))
+                    .return_key(None)
+                    .margin(Margin::ZERO),
+            )
+        })
+        .inner;
+    if value.contains(['\n', '\r']) {
+        value.retain(|c| c != '\n' && c != '\r');
+        resp.mark_changed();
+    }
+    resp
 }
 
 /// Multi-line monospace text area (paste boxes).
