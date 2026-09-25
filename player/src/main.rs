@@ -11,6 +11,16 @@ use recurate::playback::PlaybackController;
 use recurate::settings::Settings;
 use recurate::ui::App;
 
+/// Window / taskbar icon, decoded from the bundled PNG.
+fn window_icon() -> egui::IconData {
+    let png = include_bytes!("../assets/icon/recurate-256.png");
+    let img = image::load_from_memory(png)
+        .expect("bundled icon is a valid PNG")
+        .into_rgba8();
+    let (width, height) = img.dimensions();
+    egui::IconData { rgba: img.into_raw(), width, height }
+}
+
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -64,7 +74,8 @@ fn main() -> Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1100.0, 720.0])
             .with_min_inner_size([700.0, 480.0])
-            .with_title("Recurate"),
+            .with_title("Recurate")
+            .with_icon(window_icon()),
         ..Default::default()
     };
 

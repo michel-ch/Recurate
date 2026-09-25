@@ -87,7 +87,7 @@ Run from `player/`:
 
 ```bash
 cargo check --all-targets                # Type-check lib + bin + tests
-cargo test                               # 68 tests (lib + library_dedup + renumberer integration)
+cargo test                               # 76 tests (lib + library_dedup + renumberer integration)
 cargo test --test renumberer             # 9 renumberer integration tests
 cargo test --test library_dedup          # 4 path-canonicalization integration tests
 cargo run --release                      # Launch GUI; default scan root = $PWD/music

@@ -1,3 +1,5 @@
+<img src="assets/logo-128.png" width="64" align="left" alt="Recurate logo">
+
 # Recurate
 
 A native desktop music player for Windows that doubles as a YouTube replacement
@@ -164,7 +166,7 @@ Default scan root is `<cwd>/music`, so launching from `player/` picks up
 
 ```bash
 cargo check --all-targets   # Type-check everything (lib + bin + tests)
-cargo test                  # 68 tests across 5 suites
+cargo test                  # 76 tests across 5 suites
 ```
 
 The test suites are pure unit / integration tests — they don't touch
