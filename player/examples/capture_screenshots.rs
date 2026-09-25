@@ -11,10 +11,13 @@
 //!
 //! Opens the real app window with your saved settings, visits each screen and
 //! saves one PNG per screen through egui's viewport screenshot command. Nothing
-//! is clicked. Library roots that live under the current directory are shown
-//! relative, so the images don't carry the Windows user name. A track is
-//! started muted and then paused so the mini player has something to show.
-//! Settings are never written back: saves are redirected to a temp folder.
+//! is clicked. A track is started muted and then paused so the mini player
+//! has something to show.
+//!
+//! Nothing personal reaches the images: the library roots are exposed through
+//! directory junctions under `C:\RecurateDemo\` (so every path on screen reads
+//! `C:\RecurateDemo\Music\...`), the settings file lives under the same
+//! folder, and the whole folder is removed when the run ends.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
@@ -158,14 +161,58 @@ fn save_png(image: &egui::ColorImage, path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// `C:\Users\me\...\player\my_music` → `my_music` when it sits under `cwd`.
-fn relative_to(p: &str, cwd: &Path) -> String {
-    let norm = |s: &str| s.replace('/', "\\").to_lowercase();
-    let base = norm(&cwd.to_string_lossy());
-    let full = norm(p);
-    match full.strip_prefix(&format!("{base}\\")) {
-        Some(_) => p[base.len() + 1..].to_string(),
-        None => p.to_string(),
+const DEMO_ROOT: &str = r"C:\RecurateDemo";
+
+/// Junctions and config folder under `C:\RecurateDemo`, removed on drop.
+struct DemoRoot {
+    dir: PathBuf,
+}
+
+impl DemoRoot {
+    fn create(dest: &str, source: &str) -> Result<(Self, String, String)> {
+        let dir = PathBuf::from(DEMO_ROOT);
+        Self::remove_dir(&dir)?;
+        std::fs::create_dir_all(dir.join("config"))?;
+        let music = dir.join("Music");
+        let original = dir.join("Music_original");
+        Self::junction(&music, Path::new(dest))?;
+        Self::junction(&original, Path::new(source))?;
+        Ok((
+            Self { dir },
+            music.to_string_lossy().into_owned(),
+            original.to_string_lossy().into_owned(),
+        ))
+    }
+
+    fn junction(link: &Path, target: &Path) -> Result<()> {
+        let status = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .stdout(std::process::Stdio::null())
+            .status()?;
+        anyhow::ensure!(status.success(), "mklink /J {} failed", link.display());
+        Ok(())
+    }
+
+    /// `rmdir` removes junctions without touching what they point at.
+    fn remove_dir(dir: &Path) -> Result<()> {
+        if dir.exists() {
+            let status = std::process::Command::new("cmd")
+                .args(["/C", "rmdir", "/S", "/Q"])
+                .arg(dir)
+                .status()?;
+            anyhow::ensure!(status.success(), "rmdir {} failed", dir.display());
+        }
+        Ok(())
+    }
+}
+
+impl Drop for DemoRoot {
+    fn drop(&mut self) {
+        if let Err(e) = Self::remove_dir(&self.dir) {
+            eprintln!("could not remove {}: {e:#}", self.dir.display());
+        }
     }
 }
 
@@ -189,17 +236,17 @@ fn main() -> Result<()> {
         anyhow::bail!("no matching screens; known: {:?}", SHOTS.iter().map(|s| s.0).collect::<Vec<_>>());
     }
     std::fs::create_dir_all(&out_dir)?;
-    let cwd = std::env::current_dir()?;
 
     let mut settings = Settings::load_or_default();
-    // From here on any settings save lands in a throwaway folder: the
-    // relative roots and muted volume below must never reach the user's file.
-    std::env::set_var(
-        "RECURATE_CONFIG_DIR",
-        std::env::temp_dir().join("recurate-capture-config"),
-    );
-    settings.scan.roots = settings.scan.roots.iter().map(|r| relative_to(r, &cwd)).collect();
-    settings.scan.source_root = relative_to(&settings.scan.source_root, &cwd);
+    let real_dest = settings.scan.roots.first().cloned().unwrap_or_default();
+    let real_source = settings.scan.source_root.clone();
+    anyhow::ensure!(!real_dest.is_empty(), "no destination root configured");
+    let (_demo, demo_dest, demo_source) = DemoRoot::create(&real_dest, &real_source)?;
+    // From here on any settings save lands in the demo folder: the demo
+    // roots and muted volume below must never reach the user's file.
+    std::env::set_var("RECURATE_CONFIG_DIR", PathBuf::from(DEMO_ROOT).join("config"));
+    settings.scan.roots = vec![demo_dest];
+    settings.scan.source_root = demo_source;
     let volume = settings.playback.volume;
     settings.playback.volume = 0.0;
     let roots: Vec<PathBuf> = settings.scan.roots.iter().map(PathBuf::from).collect();

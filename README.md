@@ -555,6 +555,34 @@ the relevant modules (`data/fingerprint.rs`, `replacer/`, `ui/app.rs`).
 
 ---
 
+## Updating screenshots
+
+The images under `docs/screenshots/` are captured from the real app window
+by a small tool, so they always show the current build. From `player/`:
+
+```bash
+cargo run --release --example capture_screenshots              # all screens
+cargo run --release --example capture_screenshots -- songs queue   # a subset
+```
+
+The tool opens the app muted, visits every screen and saves one PNG per
+screen (a minute or two; a window will flash on screen). Your library is
+exposed through temporary junctions under `C:\RecurateDemo\`, so no path on
+screen reveals your user name, and your real `settings.toml` is never
+written. Screens with a status count (Duplicates, Missing) wait for
+fingerprinting to finish first.
+
+| File | Screen |
+|---|---|
+| `songs.png` | Songs (also the hero image) |
+| `albums.png`, `artists.png`, `folders.png` | Albums, Artists, Folders |
+| `now-playing.png`, `queue.png` | Now Playing, Queue |
+| `playlists.png`, `playlist.png` | Playlists hub, Playlist import |
+| `replacer.png`, `missing.png`, `duplicates.png` | Replacer, Missing, Duplicates |
+| `settings.png` | Settings |
+
+---
+
 ## License
 
 (Project is private — no license file at this time.)
