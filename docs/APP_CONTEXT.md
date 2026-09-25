@@ -1,6 +1,6 @@
 # Recurate — full app context for UI redesign
 
-Purpose of this file: give a designer (human or Claude Design) everything needed to design a new UI for Recurate without reading the Rust source. It describes what the app is, who uses it, every screen, every control, every piece of state a screen shows, and the constraints the new UI must respect. The current UI is a functional but plain egui (immediate-mode) desktop interface; the redesign is free to change layout, visual language, navigation and grouping, but must keep every listed action reachable.
+Purpose of this file: give a designer everything needed to design a new UI for Recurate without reading the Rust source. It describes what the app is, who uses it, every screen, every control, every piece of state a screen shows, and the constraints the new UI must respect. The current UI is a functional but plain egui (immediate-mode) desktop interface; the redesign is free to change layout, visual language, navigation and grouping, but must keep every listed action reachable.
 
 ---
 
