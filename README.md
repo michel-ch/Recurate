@@ -7,6 +7,8 @@ pipeline: it walks your existing music library, finds the cleanest audio-only
 upload of each track on YouTube, and atomically swaps your local files for the
 fresh download — all in one app.
 
+![Songs view](docs/screenshots/songs.png)
+
 ---
 
 ## Why this exists
@@ -200,6 +202,8 @@ The top bar has buttons for every screen. Below is a tour with workflows.
 
 ### Songs
 
+![Songs](docs/screenshots/songs.png)
+
 The flat list of every song in the destination library. Search by title /
 artist / album, sort by various keys, paginate at 50 rows per page (the
 library is too large to render all rows at once). Click anywhere on a
@@ -217,21 +221,31 @@ focus, so typing into the search box doesn't pause playback.)
 
 ### Albums / Artists / Folders
 
+![Albums](docs/screenshots/albums.png)
+![Artists](docs/screenshots/artists.png)
+![Folders](docs/screenshots/folders.png)
+
 Three faceted views over the same library. Folders is the most useful
 for this dataset since the library is organized by genre/source folder
 rather than ID3 album metadata.
 
 ### Now Playing
 
+![Now Playing](docs/screenshots/now-playing.png)
+
 The full-screen "what's playing" view with cover art, scrubber,
 shuffle/repeat, and the queue.
 
 ### Queue
 
+![Queue](docs/screenshots/queue.png)
+
 Reorderable upcoming-tracks list. Songs you delete from elsewhere are
 auto-evicted here.
 
 ### Replacer
+
+![Replacer](docs/screenshots/replacer.png)
 
 The headline feature. Read this section once before using it.
 
@@ -277,6 +291,8 @@ yt-dlp or ffmpeg is missing from `PATH`, and red if both are.
 
 ### Missing
 
+![Missing](docs/screenshots/missing.png)
+
 Bootstrap helper for a fresh destination. Lists every source file whose
 mirrored destination path doesn't exist yet, grouped by folder. One big
 "Copy all" button copies everything via `std::fs::copy` — no YouTube,
@@ -284,6 +300,8 @@ no transcode. Use it once after pointing at a fresh destination, then
 run the Replacer to upgrade individual tracks.
 
 ### Playlists
+
+![Playlists](docs/screenshots/playlists.png)
 
 Every folder in the destination root is a playlist. The Playlists hub
 lists them on the left (**＋ New** creates an empty folder) and edits the
@@ -307,6 +325,8 @@ selected one on the right:
 
 ### Playlist
 
+![Playlist](docs/screenshots/playlist.png)
+
 Download a whole YouTube playlist as new library content. Paste a
 playlist link, click **Fetch** (one `yt-dlp --flat-playlist` call, no
 downloads yet), optionally rename the target folder (defaults to the
@@ -319,6 +339,8 @@ pausable download worker as the Replacer and the same
 `cookies_browser` setting for bot-detection walls.
 
 ### Duplicates
+
+![Duplicates](docs/screenshots/duplicates.png)
 
 Acoustic-fingerprint duplicate detection.
 
@@ -342,6 +364,8 @@ After deletion, each affected folder gets a single renumber pass so the
 sequence stays contiguous.
 
 ### Settings
+
+![Settings](docs/screenshots/settings.png)
 
 Library paths, renumber threshold, replacer backend, API key, cookies
 browser. The API key is stored locally in `settings.toml`; a
@@ -503,7 +527,8 @@ Recurate/
 ├── .gitignore
 ├── docs/
 │   ├── diagrams/         # Architecture diagram sources (HTML)
-│   └── images/           # Diagram exports (SVG) referenced from this README
+│   ├── images/           # Diagram exports (SVG) referenced from this README
+│   └── screenshots/      # App screenshots, regenerated with the capture_screenshots example
 └── player/               # The Rust crate (binary name: recurate)
     ├── Cargo.toml
     ├── src/
