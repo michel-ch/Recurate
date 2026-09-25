@@ -5,8 +5,6 @@ pipeline: it walks your existing music library, finds the cleanest audio-only
 upload of each track on YouTube, and atomically swaps your local files for the
 fresh download — all in one app.
 
-![Hero — Songs view](docs/screenshots/songs.png)
-
 ---
 
 ## Why this exists
@@ -192,8 +190,6 @@ something, the catalog is untouched.
 Edit both paths in **Settings → Library paths**. Changing them auto-rescans
 the moment you leave the Settings page.
 
-![Settings — paths](docs/screenshots/settings.png)
-
 ---
 
 ## The screens
@@ -201,8 +197,6 @@ the moment you leave the Settings page.
 The top bar has buttons for every screen. Below is a tour with workflows.
 
 ### Songs
-
-![Songs](docs/screenshots/songs.png)
 
 The flat list of every song in the destination library. Search by title /
 artist / album, sort by various keys, paginate at 50 rows per page (the
@@ -225,10 +219,6 @@ Three faceted views over the same library. Folders is the most useful
 for this dataset since the library is organized by genre/source folder
 rather than ID3 album metadata.
 
-![Albums](docs/screenshots/albums.png)
-![Artists](docs/screenshots/artists.png)
-![Folders](docs/screenshots/folders.png)
-
 ### Now Playing
 
 The full-screen "what's playing" view with cover art, scrubber,
@@ -242,8 +232,6 @@ auto-evicted here.
 ### Replacer
 
 The headline feature. Read this section once before using it.
-
-![Replacer](docs/screenshots/replacer.png)
 
 The Replacer enumerates the **source** root (not the destination), so
 its song count reflects your catalog. The screen does not show a
@@ -282,8 +270,6 @@ past it:
   cookie database while running, so yt-dlp can't read the cookies until
   you exit.
 
-![Settings — Replacer](docs/screenshots/settings.png)
-
 The status pill at the top of the Replacer screen turns amber if
 yt-dlp or ffmpeg is missing from `PATH`, and red if both are.
 
@@ -294,8 +280,6 @@ mirrored destination path doesn't exist yet, grouped by folder. One big
 "Copy all" button copies everything via `std::fs::copy` — no YouTube,
 no transcode. Use it once after pointing at a fresh destination, then
 run the Replacer to upgrade individual tracks.
-
-![Missing](docs/screenshots/missing.png)
 
 ### Playlists
 
@@ -336,8 +320,6 @@ pausable download worker as the Replacer and the same
 
 Acoustic-fingerprint duplicate detection.
 
-![Duplicates](docs/screenshots/duplicates.png)
-
 Songs are grouped by **(audio fingerprint, duration in seconds, parent
 folder)**. The fingerprint is a 256-bit acoustic hash computed from two
 30-second regions of the decoded PCM, so:
@@ -358,8 +340,6 @@ After deletion, each affected folder gets a single renumber pass so the
 sequence stays contiguous.
 
 ### Settings
-
-![Settings](docs/screenshots/settings.png)
 
 Library paths, renumber threshold, replacer backend, API key, cookies
 browser. The API key is stored locally in `settings.toml`; a
@@ -520,7 +500,8 @@ Recurate/
 ├── README.md             # This file
 ├── .gitignore
 ├── docs/
-│   └── screenshots/      # Images referenced from this README
+│   ├── diagrams/         # Architecture diagram sources (HTML)
+│   └── images/           # Diagram exports (SVG) referenced from this README
 └── player/               # The Rust crate (binary name: recurate)
     ├── Cargo.toml
     ├── src/
@@ -544,33 +525,6 @@ For deeper architectural details — fingerprint algorithm history, the
 two-root replace pipeline, why downloads use `--cookies-from-browser`,
 why the Replacer screen has no per-song UI — read the doc comments in
 the relevant modules (`data/fingerprint.rs`, `replacer/`, `ui/app.rs`).
-
----
-
-## Adding screenshots
-
-This README references images at `docs/screenshots/<name>.png`. To
-populate them:
-
-1. Run the app: `cd player && cargo run --release`.
-2. For each entry in the table below, navigate to the screen and capture
-   it with **Win + Shift + S** (Snipping Tool), then save with the
-   exact filename.
-
-| Filename | Capture |
-|---|---|
-| `songs.png` | The Songs screen with the library loaded. Search bar + at least 10 rows visible. |
-| `albums.png` | Albums view with several album cards. |
-| `artists.png` | Artists view with several artist cards. |
-| `folders.png` | Folders view with several folder cards. |
-| `replacer.png` | The Replacer screen mid-run — status pill, folder picker, and stat lines visible. |
-| `missing.png` | The Missing page with at least one folder group expanded. |
-| `duplicates.png` | The Duplicates page showing at least one duplicate group. |
-| `settings.png` | The Settings screen, top of the page. |
-
-Save into `docs/screenshots/`. The README will pick them up
-automatically — Markdown viewers fall back to broken-image icons until
-you do.
 
 ---
 

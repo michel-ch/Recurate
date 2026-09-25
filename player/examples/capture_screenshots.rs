@@ -1,4 +1,4 @@
-//! Regenerates the README screenshots in `docs/screenshots/`.
+//! Captures one PNG per screen from the real app window (for docs or review).
 //!
 //! Run from `player/`:
 //!
