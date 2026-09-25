@@ -27,9 +27,12 @@ pub fn draw(ui: &mut Ui, app: &mut App) {
     // Header: logo mark + wordmark.
     ui.horizontal(|ui| {
         ui.add_space(theme::SPACE_2);
-        let (rect, _) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::hover());
-        ui.painter()
-            .rect_filled(rect, Rounding::same(theme::RADIUS_SM), pal.accent_fill);
+        // The YD logo (same PNG as the window icon).
+        ui.add(
+            egui::Image::new(egui::include_image!("../../../assets/icon/recurate-256.png"))
+                .fit_to_exact_size(vec2(24.0, 24.0))
+                .rounding(Rounding::same(theme::RADIUS_SM)),
+        );
         ui.label(
             egui::RichText::new("Recurate")
                 .font(theme::serif(theme::H3))
