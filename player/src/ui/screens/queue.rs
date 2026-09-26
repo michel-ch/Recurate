@@ -1,3 +1,4 @@
+use crate::ui::components::song_menu::{self, MenuAction};
 use crate::ui::components::song_row;
 use crate::ui::App;
 
@@ -14,6 +15,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     egui::ScrollArea::vertical().show(ui, |ui| {
         let mut jump_to: Option<usize> = None;
         let mut remove_id: Option<i64> = None;
+        let mut menu: Option<(MenuAction, usize)> = None;
         for (i, song) in queue.items.iter().enumerate() {
             let row = song_row::draw_with_options(
                 ui,
@@ -32,12 +34,18 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
             if row.remove_clicked {
                 remove_id = Some(song.id);
             }
+            if let Some(a) = row.menu {
+                menu = Some((a, i));
+            }
         }
         if let Some(idx) = jump_to {
             app.playback.jump_to(idx);
         }
         if let Some(id) = remove_id {
             app.playback.remove_from_queue(id);
+        }
+        if let Some((a, i)) = menu {
+            song_menu::perform(app, a, &queue.items[i], &queue.items);
         }
     });
 }

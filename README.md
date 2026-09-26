@@ -208,11 +208,25 @@ with workflows.
 
 ![Songs](docs/screenshots/songs.png)
 
-The flat list of every song in the destination library. Search by title /
-artist / album, sort by various keys, paginate at 50 rows per page (the
-library is too large to render all rows at once). Click anywhere on a
-row — or use the per-row **▶** button — to start playback. The trailing
-**✕** removes the file (renumbers the folder afterwards).
+The flat list of every song in the destination library. The search field
+matches every word you type against title, artist, album, file name and
+folder name (`powfu bed` finds `120 - death bed - Powfu.mp3`); the result
+count and a clear button appear while a query is active, `Ctrl+F` focuses
+the field and `Esc` clears it. Sort by various keys, paginate at 50 rows
+per page (the library is too large to render all rows at once). Click
+anywhere on a row — or use the per-row **▶** button — to start playback.
+The trailing **✕** removes the file (renumbers the folder afterwards).
+
+**Right-click any song** (here, in Albums / Artists / Folders, the Queue
+and a playlist's order list) for the song menu:
+
+- **Play**, **Play next**, **Add to queue**
+- **Show in folder** — opens Explorer with the file selected
+- **Copy full path**
+- **Properties…** — file name, folder, full path, size, modified time,
+  duration, tags (title, artist, album, track, year, genre, composer) and
+  whether cover art is embedded
+- **Delete file…** — with a confirmation; not offered from the Queue
 
 **Keyboard shortcuts that work everywhere:**
 
@@ -495,6 +509,8 @@ cookies_browser = ""        # "chrome", "firefox", "edge"… empty = off
 | `Space` | Play / pause |
 | `Ctrl + →` | Next track |
 | `Ctrl + ←` | Previous track |
+| `Ctrl + F` | Focus the search field (library pages) |
+| `Esc` | Clear the search field / close a dialog |
 
 Shortcuts are gated on focus: typing into the search bar or any text
 field never triggers them.

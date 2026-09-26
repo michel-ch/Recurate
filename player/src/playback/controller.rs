@@ -148,6 +148,45 @@ impl PlaybackController {
         self.state.write().repeat_mode = mode;
     }
 
+    /// Insert `song` right after the current track (or at the front of an
+    /// empty queue, which also starts playback).
+    pub fn play_next(&self, song: Song) {
+        let start_now = {
+            let mut q = self.queue.write();
+            match q.current {
+                Some(c) => {
+                    let at = (c + 1).min(q.items.len());
+                    q.items.insert(at, song);
+                    false
+                }
+                None => {
+                    q.replace(vec![song], 0);
+                    true
+                }
+            }
+        };
+        if start_now {
+            self.start_current();
+        }
+    }
+
+    /// Append `song` to the end of the queue (starts playback if empty).
+    pub fn add_to_queue(&self, song: Song) {
+        let start_now = {
+            let mut q = self.queue.write();
+            if q.current.is_none() {
+                q.replace(vec![song], 0);
+                true
+            } else {
+                q.items.push(song);
+                false
+            }
+        };
+        if start_now {
+            self.start_current();
+        }
+    }
+
     pub fn library(&self) -> &Arc<Library> {
         &self.library
     }

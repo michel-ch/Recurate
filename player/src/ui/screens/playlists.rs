@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::domain::{Screen, Song};
 use crate::renumberer;
 use crate::replacer::resolve::ResolveJob;
+use crate::ui::components::song_menu::{self, MenuAction};
 use crate::ui::App;
 
 /// A resolved paste whose enqueue is on hold until the user decides what to
@@ -557,14 +558,10 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
     let mut drop_at: Option<(usize, usize)> = None;
     let mut delete_id: Option<i64> = None;
     let can_delete = !dirty && !batch_here;
+    let mut menu: Option<(MenuAction, usize)> = None;
 
     // Snapshot so the row closures don't hold a borrow on `app`.
-    let rows: Vec<(i64, String, String)> = app
-        .playlists
-        .order
-        .iter()
-        .map(|s| (s.id, s.title.clone(), s.artist.clone()))
-        .collect();
+    let rows: Vec<Song> = app.playlists.order.clone();
 
     // Leave room below the list for the "Move track #" row; otherwise the
     // scroll area takes every remaining pixel and that row is pushed out of
@@ -576,7 +573,8 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         .max_height(list_h)
         .show_rows(ui, row_h, n, |ui, range| {
             for i in range {
-                let (song_id, title, artist) = &rows[i];
+                let song = &rows[i];
+                let (song_id, title, artist) = (&song.id, &song.title, &song.artist);
                 let id = egui::Id::new(("pl_row", folder, *song_id));
                 let frame = egui::Frame::none().inner_margin(2.0);
                 let (_, dropped) = ui.dnd_drop_zone::<usize, ()>(frame, |ui| {
@@ -586,7 +584,13 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                             ui.label(format!("{:02}", i + 1));
                         });
                         let title_w = (ui.available_width() - 290.0).max(40.0);
-                        ui.add_sized([title_w, row_h], egui::Label::new(title).truncate());
+                        let r = ui.add_sized(
+                            [title_w, row_h],
+                            egui::Label::new(title).truncate().sense(egui::Sense::click()),
+                        );
+                        if let Some(a) = song_menu::show(&r, song, can_delete) {
+                            menu = Some((a, i));
+                        }
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui
                                 .add_enabled(can_delete, egui::Button::new("✕").small())
@@ -626,6 +630,10 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                 }
             }
         });
+
+    if let Some((a, i)) = menu {
+        song_menu::perform(app, a, &rows[i], &rows);
+    }
 
     ui.horizontal(|ui| {
         ui.label("Move track #");

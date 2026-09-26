@@ -3,7 +3,9 @@ use std::path::PathBuf;
 
 use crate::domain::{Screen, Song, SortOption};
 use crate::playback::deletion;
+use crate::ui::components::song_menu::{self, MenuAction};
 use crate::ui::components::song_row;
+use crate::ui::widgets;
 use crate::ui::App;
 
 pub fn draw(ui: &mut egui::Ui, app: &mut App) {
@@ -56,6 +58,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
 
     let mut play_idx: Option<usize> = None;
     let mut delete_request: Option<i64> = None;
+    let mut menu: Option<(MenuAction, usize)> = None;
 
     let page_total = end - start;
     egui::ScrollArea::vertical().auto_shrink([false; 2]).show_rows(
@@ -74,6 +77,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                     song_row::RowOptions {
                         show_remove: true,
                         remove_hover: Some("Delete"),
+                        can_delete: true,
                         ..Default::default()
                     },
                 );
@@ -82,6 +86,9 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 }
                 if row.remove_clicked {
                     delete_request = Some(song.id);
+                }
+                if let Some(a) = row.menu {
+                    menu = Some((a, i));
                 }
             }
         },
@@ -93,6 +100,9 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     if let Some(id) = delete_request {
         handle_delete(app, id);
     }
+    if let Some((a, i)) = menu {
+        song_menu::perform(app, a, &songs[i], &songs);
+    }
 }
 
 pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
@@ -102,6 +112,7 @@ pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
     let total = songs.len();
 
     let mut play_idx: Option<usize> = None;
+    let mut menu: Option<(MenuAction, usize)> = None;
 
     egui::ScrollArea::vertical().auto_shrink([false; 2]).show_rows(
         ui,
@@ -110,9 +121,18 @@ pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
         |ui, range| {
             for i in range {
                 let song = &songs[i];
-                let row = song_row::draw(ui, i, song, false);
+                let row = song_row::draw_with_options(
+                    ui,
+                    i,
+                    song,
+                    false,
+                    song_row::RowOptions { can_delete: true, ..Default::default() },
+                );
                 if row.clicked {
                     play_idx = Some(i);
+                }
+                if let Some(a) = row.menu {
+                    menu = Some((a, i));
                 }
             }
         },
@@ -120,6 +140,9 @@ pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
 
     if let Some(idx) = play_idx {
         app.playback.play_songs((*songs).clone(), idx, None);
+    }
+    if let Some((a, i)) = menu {
+        song_menu::perform(app, a, &songs[i], &songs);
     }
 }
 
@@ -155,14 +178,27 @@ pub fn draw_album_detail(ui: &mut egui::Ui, app: &mut App, album: &str) {
     songs.sort_by_key(|s| s.track_no.unwrap_or(i32::MAX));
     egui::ScrollArea::vertical().show(ui, |ui| {
         let mut play_request: Option<(Vec<Song>, usize)> = None;
+        let mut menu: Option<(MenuAction, usize)> = None;
         for (i, song) in songs.iter().enumerate() {
-            let row = song_row::draw(ui, i, song, false);
+            let row = song_row::draw_with_options(
+                ui,
+                i,
+                song,
+                false,
+                song_row::RowOptions { can_delete: true, ..Default::default() },
+            );
             if row.clicked {
                 play_request = Some((songs.clone(), i));
+            }
+            if let Some(a) = row.menu {
+                menu = Some((a, i));
             }
         }
         if let Some((list, idx)) = play_request {
             app.playback.play_songs(list, idx, None);
+        }
+        if let Some((a, i)) = menu {
+            song_menu::perform(app, a, &songs[i], &songs);
         }
     });
 }
@@ -198,14 +234,27 @@ pub fn draw_artist_detail(ui: &mut egui::Ui, app: &mut App, artist: &str) {
         .collect();
     egui::ScrollArea::vertical().show(ui, |ui| {
         let mut play_request: Option<(Vec<Song>, usize)> = None;
+        let mut menu: Option<(MenuAction, usize)> = None;
         for (i, song) in songs.iter().enumerate() {
-            let row = song_row::draw(ui, i, song, false);
+            let row = song_row::draw_with_options(
+                ui,
+                i,
+                song,
+                false,
+                song_row::RowOptions { can_delete: true, ..Default::default() },
+            );
             if row.clicked {
                 play_request = Some((songs.clone(), i));
+            }
+            if let Some(a) = row.menu {
+                menu = Some((a, i));
             }
         }
         if let Some((list, idx)) = play_request {
             app.playback.play_songs(list, idx, None);
+        }
+        if let Some((a, i)) = menu {
+            song_menu::perform(app, a, &songs[i], &songs);
         }
     });
 }
@@ -219,6 +268,7 @@ pub fn draw_folders(ui: &mut egui::Ui, app: &mut App) {
             ui.collapsing(folder.display().to_string(), |ui| {
                 let mut play_request: Option<(Vec<Song>, usize)> = None;
                 let mut delete_request: Option<i64> = None;
+                let mut menu: Option<(MenuAction, usize)> = None;
                 for (i, song) in songs.iter().enumerate() {
                     let row = song_row::draw_with_options(
                         ui,
@@ -228,6 +278,7 @@ pub fn draw_folders(ui: &mut egui::Ui, app: &mut App) {
                         song_row::RowOptions {
                             show_remove: true,
                             remove_hover: Some("Delete"),
+                            can_delete: true,
                             ..Default::default()
                         },
                     );
@@ -237,6 +288,9 @@ pub fn draw_folders(ui: &mut egui::Ui, app: &mut App) {
                     if row.remove_clicked {
                         delete_request = Some(song.id);
                     }
+                    if let Some(a) = row.menu {
+                        menu = Some((a, i));
+                    }
                 }
                 if let Some((list, idx)) = play_request {
                     app.playback.play_songs(list, idx, None);
@@ -244,19 +298,49 @@ pub fn draw_folders(ui: &mut egui::Ui, app: &mut App) {
                 if let Some(id) = delete_request {
                     handle_delete(app, id);
                 }
+                if let Some((a, i)) = menu {
+                    song_menu::perform(app, a, &songs[i], &songs);
+                }
             });
         }
     });
 }
 
 
+/// Page title plus the library search field. Every word of the query must
+/// match the title, artist, album, file name or folder name
+/// (`app::song_matches`). `Ctrl+F` focuses the field, `Esc` clears it, and
+/// the result count is shown while a query is active.
 fn draw_header(ui: &mut egui::Ui, app: &mut App, title: &str) {
-    ui.horizontal(|ui| {
-        ui.heading(title);
-        ui.separator();
-        ui.label("Search:");
-        ui.add(egui::TextEdit::singleline(&mut app.search_query).desired_width(200.0));
+    let focus = ui.input(|i| i.modifiers.command && i.key_pressed(egui::Key::F));
+    let before = app.search_query.clone();
+    let count = if before.is_empty() { None } else { Some(app.library_view().len()) };
+    widgets::page_header(ui, title, None, |ui| {
+        if let Some(n) = count {
+            widgets::caption(ui, format!("{n} result{}", if n == 1 { "" } else { "s" }));
+            if widgets::icon_button(ui, "\u{2715}", 22.0, widgets::p(ui).ink_3)
+                .on_hover_text("Clear search")
+                .clicked()
+            {
+                app.search_query.clear();
+            }
+        }
+        let resp = widgets::search_input(
+            ui,
+            &mut app.search_query,
+            "Search title, artist, album, file or folder",
+            300.0,
+        );
+        if focus {
+            resp.request_focus();
+        }
+        if resp.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            app.search_query.clear();
+        }
     });
+    if app.search_query != before {
+        app.songs_page = 0;
+    }
 }
 
 fn draw_sort_picker(ui: &mut egui::Ui, app: &mut App) {

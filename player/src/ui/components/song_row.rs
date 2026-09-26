@@ -10,6 +10,7 @@
 use egui::{vec2, Align, Rect, Rounding, Sense, Stroke, Ui};
 
 use crate::domain::Song;
+use crate::ui::components::song_menu::{self, MenuAction};
 use crate::ui::theme;
 use crate::ui::widgets;
 
@@ -18,6 +19,8 @@ pub const ROW_H: f32 = 40.0;
 pub struct RowAction {
     pub clicked: bool,
     pub remove_clicked: bool,
+    /// Entry picked in the right-click menu this frame.
+    pub menu: Option<MenuAction>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -26,6 +29,8 @@ pub struct RowOptions {
     pub remove_hover: Option<&'static str>,
     /// Already-played queue rows: text in `--ink-2`, art faded.
     pub dim: bool,
+    /// Offer "Delete file" in the right-click menu.
+    pub can_delete: bool,
 }
 
 pub fn draw(ui: &mut Ui, index: usize, song: &Song, is_current: bool) -> RowAction {
@@ -172,8 +177,11 @@ pub fn draw_with_options(
         remove_clicked = btn.clicked();
     }
 
+    let menu = song_menu::show(&response, song, opts.can_delete);
+
     RowAction {
         clicked: response.clicked() && !remove_clicked,
         remove_clicked,
+        menu,
     }
 }

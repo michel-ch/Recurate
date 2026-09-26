@@ -13,7 +13,7 @@ use crate::domain::{sort_songs, Screen, Song, SortOption};
 use crate::playback::PlaybackController;
 use crate::replacer::SearchBackend;
 use crate::settings::Settings;
-use crate::ui::components::{mini_player, sidebar};
+use crate::ui::components::{mini_player, sidebar, song_menu};
 use crate::ui::fonts;
 use crate::ui::theme;
 use crate::ui::screens;
@@ -21,6 +21,30 @@ use crate::ui::screens::playlist::PlaylistUi;
 use crate::ui::screens::playlists::PlaylistsUi;
 use crate::ui::screens::settings::SettingsUi;
 use crate::ui::toasts::{self, Toast, ToastLevel};
+
+/// Every whitespace-separated word of `query` must appear (case-insensitive)
+/// in the title, artist, album, file name or folder name.
+pub fn song_matches(s: &Song, query: &str) -> bool {
+    let file = s.path.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+    let folder = s
+        .path
+        .parent()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy())
+        .unwrap_or_default();
+    let hay = [
+        s.title.as_str(),
+        s.artist.as_str(),
+        s.album.as_str(),
+        file.as_ref(),
+        folder.as_ref(),
+    ]
+    .join("\n")
+    .to_lowercase();
+    query
+        .split_whitespace()
+        .all(|w| hay.contains(&w.to_lowercase()))
+}
 
 pub const PAGE_SIZE: usize = 50;
 
@@ -84,6 +108,12 @@ pub struct App {
     pub fingerprint_running: Arc<AtomicBool>,
     pub fingerprint_library_version: u64,
     pub toasts: Vec<Toast>,
+    /// Open Properties dialog (right-click → Properties…).
+    pub song_props: Option<song_menu::SongProps>,
+    /// Song awaiting the delete confirmation from the right-click menu.
+    pub confirm_delete: Option<Song>,
+    /// Text to hand to the clipboard at the end of the frame.
+    pub copy_text: Option<String>,
     pub playlist: PlaylistUi,
     pub playlists: PlaylistsUi,
     pub settings_ui: SettingsUi,
@@ -140,6 +170,9 @@ impl App {
             fingerprint_running: Arc::new(AtomicBool::new(false)),
             fingerprint_library_version: 0,
             toasts: Vec::new(),
+            song_props: None,
+            confirm_delete: None,
+            copy_text: None,
             playlist: PlaylistUi::default(),
             playlists: PlaylistsUi::default(),
             settings_ui,
@@ -535,13 +568,8 @@ impl App {
                 if self.search_query.is_empty() {
                     all.to_vec()
                 } else {
-                    let q = self.search_query.to_lowercase();
                     all.iter()
-                        .filter(|s| {
-                            s.title.to_lowercase().contains(&q)
-                                || s.artist.to_lowercase().contains(&q)
-                                || s.album.to_lowercase().contains(&q)
-                        })
+                        .filter(|s| song_matches(s, &self.search_query))
                         .cloned()
                         .collect()
                 }
@@ -625,6 +653,7 @@ impl eframe::App for App {
             });
 
         toasts::draw(ctx, &mut self.toasts);
+        song_menu::draw_dialogs(ctx, self);
 
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(pal.paper).inner_margin(egui::Margin {
@@ -662,5 +691,40 @@ impl eframe::App for App {
                     Screen::Settings => screens::settings::draw(ui, self),
                 }
             });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::song_matches;
+    use crate::domain::Song;
+    use std::path::PathBuf;
+
+    fn song() -> Song {
+        Song {
+            id: 1,
+            title: "death bed".into(),
+            artist: "Powfu".into(),
+            album: "Singles".into(),
+            album_artist: String::new(),
+            duration: std::time::Duration::ZERO,
+            year: None,
+            genre: None,
+            composer: None,
+            track_no: None,
+            path: PathBuf::from(r"C:\Music\Chill Mix\120 - death bed - Powfu.mp3"),
+            has_embedded_art: false,
+        }
+    }
+
+    #[test]
+    fn matches_tags_file_name_and_folder() {
+        let s = song();
+        assert!(song_matches(&s, "DEATH"));
+        assert!(song_matches(&s, "powfu bed"));
+        assert!(song_matches(&s, "120"));
+        assert!(song_matches(&s, "chill mix"));
+        assert!(song_matches(&s, ""));
+        assert!(!song_matches(&s, "death metal"));
     }
 }
