@@ -59,6 +59,8 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     let mut play_idx: Option<usize> = None;
     let mut delete_request: Option<i64> = None;
     let mut menu: Option<(MenuAction, usize)> = None;
+    let mut reveal: Option<usize> = None;
+    let searching = !app.search_query.is_empty();
 
     let page_total = end - start;
     egui::ScrollArea::vertical().auto_shrink([false; 2]).show_rows(
@@ -78,6 +80,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                         show_remove: true,
                         remove_hover: Some("Delete"),
                         can_delete: true,
+                        location: searching.then(|| folder_name(song)),
                         ..Default::default()
                     },
                 );
@@ -89,6 +92,9 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 }
                 if let Some(a) = row.menu {
                     menu = Some((a, i));
+                }
+                if row.location_clicked {
+                    reveal = Some(i);
                 }
             }
         },
@@ -103,6 +109,33 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     if let Some((a, i)) = menu {
         song_menu::perform(app, a, &songs[i], &songs);
     }
+    if let Some(i) = reveal {
+        song_menu::reveal_in_playlist(app, &songs[i]);
+    }
+}
+
+/// Folder (= playlist) name for the location pill. Leaked into a `&'static
+/// str` through a per-name cache so the row can borrow it without lifetimes;
+/// the set of folder names is small (one per playlist) and never shrinks
+/// while the app runs.
+fn folder_name(song: &Song) -> &'static str {
+    use std::collections::HashSet;
+    use std::sync::Mutex;
+    static NAMES: Mutex<Option<HashSet<&'static str>>> = Mutex::new(None);
+    let name = song
+        .path
+        .parent()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut guard = NAMES.lock().unwrap();
+    let set = guard.get_or_insert_with(HashSet::new);
+    if let Some(s) = set.get(name.as_str()) {
+        return s;
+    }
+    let leaked: &'static str = Box::leak(name.into_boxed_str());
+    set.insert(leaked);
+    leaked
 }
 
 pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
@@ -113,6 +146,7 @@ pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
 
     let mut play_idx: Option<usize> = None;
     let mut menu: Option<(MenuAction, usize)> = None;
+    let mut reveal: Option<usize> = None;
 
     egui::ScrollArea::vertical().auto_shrink([false; 2]).show_rows(
         ui,
@@ -126,13 +160,20 @@ pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
                     i,
                     song,
                     false,
-                    song_row::RowOptions { can_delete: true, ..Default::default() },
+                    song_row::RowOptions {
+                        can_delete: true,
+                        location: Some(folder_name(song)),
+                        ..Default::default()
+                    },
                 );
                 if row.clicked {
                     play_idx = Some(i);
                 }
                 if let Some(a) = row.menu {
                     menu = Some((a, i));
+                }
+                if row.location_clicked {
+                    reveal = Some(i);
                 }
             }
         },
@@ -143,6 +184,9 @@ pub fn draw_search(ui: &mut egui::Ui, app: &mut App) {
     }
     if let Some((a, i)) = menu {
         song_menu::perform(app, a, &songs[i], &songs);
+    }
+    if let Some(i) = reveal {
+        song_menu::reveal_in_playlist(app, &songs[i]);
     }
 }
 

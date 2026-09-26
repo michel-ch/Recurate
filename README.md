@@ -212,7 +212,9 @@ The flat list of every song in the destination library. The search field
 matches every word you type against title, artist, album, file name and
 folder name (`powfu bed` finds `120 - death bed - Powfu.mp3`); the result
 count and a clear button appear while a query is active, `Ctrl+F` focuses
-the field and `Esc` clears it. Sort by various keys, paginate at 50 rows
+the field and `Esc` clears it. While searching, every row ends with a
+pill naming the playlist (folder) the song lives in; click it to open
+that playlist scrolled to the song. Sort by various keys, paginate at 50 rows
 per page (the library is too large to render all rows at once). Click
 anywhere on a row — or use the per-row **▶** button — to start playback.
 The trailing **✕** removes the file (renumbers the folder afterwards).
@@ -221,6 +223,8 @@ The trailing **✕** removes the file (renumbers the folder afterwards).
 and a playlist's order list) for the song menu:
 
 - **Play**, **Play next**, **Add to queue**
+- **Go to playlist** — opens the Playlists page on the song's folder,
+  scrolled to and highlighting the song
 - **Show in folder** — opens Explorer with the file selected
 - **Copy full path**
 - **Properties…** — file name, folder, full path, size, modified time,
@@ -340,6 +344,11 @@ selected one on the right:
   anyway.
 - **Delete** — ✕ on a row deletes the file and renumbers the folder. Apply or
   revert pending order edits first.
+
+**Search this playlist:** the field above the order list filters the rows
+(same word-wise matching as the Songs page); rows keep their real position
+numbers and the move buttons still work, but drag-and-drop is ignored
+while a filter is active.
 
 ### Playlist
 

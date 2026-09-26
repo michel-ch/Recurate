@@ -56,6 +56,14 @@ pub struct PlaylistsUi {
     pub move_target: usize,
     /// Folder list sorted Z→A instead of the default A→Z (case-insensitive).
     pub sort_desc: bool,
+    /// Search field above the order list; filters rows with `song_matches`.
+    pub filter: String,
+    /// Song to scroll to and highlight on the next frame (set by "Go to
+    /// playlist" / the location pill on search results). Cleared once the
+    /// scroll happened; `highlight` keeps the row tinted until the folder
+    /// changes or the user picks another song.
+    pub reveal: Option<i64>,
+    pub highlight: Option<i64>,
     /// `(library_version, folder, ids sorted by filename)` — refreshed only
     /// when the library version changes, so `is_dirty` doesn't filter the
     /// whole library every frame.
@@ -502,6 +510,10 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         app.playlists.order_version = version;
         app.playlists.order_folder = Some(folder.clone());
         app.playlists.move_target = 1;
+        app.playlists.filter.clear();
+        if app.playlists.reveal.is_none() {
+            app.playlists.highlight = None;
+        }
     } else if app.playlists.order_version != version {
         // Disk changed (download landed, delete, external edit). If the user
         // had no edits, take the disk order wholesale: parallel downloads land
@@ -553,6 +565,32 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         }
     });
 
+    // Search within this playlist. While a filter is active the rows keep
+    // their real position numbers but drag-and-drop is ignored: dropping
+    // between two visible rows says nothing about the hidden ones.
+    ui.horizontal(|ui| {
+        crate::ui::widgets::search_input(ui, &mut app.playlists.filter, "Search this playlist", 260.0);
+        if !app.playlists.filter.is_empty() {
+            let shown = app
+                .playlists
+                .order
+                .iter()
+                .filter(|s| crate::ui::app::song_matches(s, &app.playlists.filter))
+                .count();
+            crate::ui::widgets::caption(ui, format!("{shown} of {n}"));
+            if crate::ui::widgets::icon_button(ui, "\u{2715}", 22.0, crate::ui::widgets::p(ui).ink_3)
+                .on_hover_text("Clear")
+                .clicked()
+            {
+                app.playlists.filter.clear();
+            }
+        }
+    });
+    let filtering = !app.playlists.filter.is_empty();
+    let visible: Vec<usize> = (0..n)
+        .filter(|&i| !filtering || crate::ui::app::song_matches(&app.playlists.order[i], &app.playlists.filter))
+        .collect();
+
     let row_h = ui.text_style_height(&egui::TextStyle::Body) + 8.0;
     let mut mv: Option<(usize, usize)> = None; // (from, to)
     let mut drop_at: Option<(usize, usize)> = None;
@@ -568,15 +606,28 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
     // the window.
     let bottom_reserve = ui.spacing().interact_size.y + ui.spacing().item_spacing.y * 3.0;
     let list_h = (ui.available_height() - bottom_reserve).max(row_h * 3.0);
-    egui::ScrollArea::vertical()
-        .auto_shrink([false; 2])
-        .max_height(list_h)
-        .show_rows(ui, row_h, n, |ui, range| {
-            for i in range {
+    // Rows are `row_h` plus the 2px frame margin and the item spacing.
+    let row_stride = row_h + 4.0 + ui.spacing().item_spacing.y;
+    let mut scroll = egui::ScrollArea::vertical().auto_shrink([false; 2]).max_height(list_h);
+    if let Some(id) = app.playlists.reveal.take() {
+        if let Some(k) = visible.iter().position(|&i| rows[i].id == id) {
+            let offset = (k as f32 * row_stride - list_h / 2.0 + row_stride / 2.0).max(0.0);
+            scroll = scroll.vertical_scroll_offset(offset);
+            app.playlists.highlight = Some(id);
+        }
+    }
+    let highlight = app.playlists.highlight;
+    let accent_soft = crate::ui::widgets::p(ui).accent_soft;
+    scroll.show_rows(ui, row_h, visible.len(), |ui, range| {
+            for k in range {
+                let i = visible[k];
                 let song = &rows[i];
                 let (song_id, title, artist) = (&song.id, &song.title, &song.artist);
                 let id = egui::Id::new(("pl_row", folder, *song_id));
-                let frame = egui::Frame::none().inner_margin(2.0);
+                let mut frame = egui::Frame::none().inner_margin(2.0);
+                if highlight == Some(*song_id) {
+                    frame = frame.fill(accent_soft).rounding(crate::ui::theme::RADIUS_SM);
+                }
                 let (_, dropped) = ui.dnd_drop_zone::<usize, ()>(frame, |ui| {
                     ui.horizontal(|ui| {
                         ui.dnd_drag_source(id, i, |ui| {
@@ -626,7 +677,9 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                     });
                 });
                 if let Some(from) = dropped {
-                    drop_at = Some((*from, i));
+                    if !filtering {
+                        drop_at = Some((*from, i));
+                    }
                 }
             }
         });

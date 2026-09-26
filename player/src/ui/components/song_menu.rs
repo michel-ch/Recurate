@@ -22,6 +22,8 @@ pub enum MenuAction {
     Play,
     PlayNext,
     AddToQueue,
+    /// Open the Playlists page on the song's folder, scrolled to the song.
+    GoToPlaylist,
     ShowInFolder,
     CopyPath,
     Properties,
@@ -59,6 +61,7 @@ pub fn show(response: &Response, song: &Song, can_delete: bool) -> Option<MenuAc
         entry(ui, "Play next", MenuAction::PlayNext);
         entry(ui, "Add to queue", MenuAction::AddToQueue);
         ui.separator();
+        entry(ui, "Go to playlist", MenuAction::GoToPlaylist);
         entry(ui, "Show in folder", MenuAction::ShowInFolder);
         entry(ui, "Copy full path", MenuAction::CopyPath);
         entry(ui, "Properties…", MenuAction::Properties);
@@ -93,6 +96,7 @@ pub fn perform(app: &mut App, action: MenuAction, song: &Song, context: &[Song])
             app.playback.add_to_queue(song.clone());
             app.toast_info(format!("Queued: {}", song.title));
         }
+        MenuAction::GoToPlaylist => reveal_in_playlist(app, song),
         MenuAction::ShowInFolder => {
             if let Err(e) = show_in_folder(&song.path) {
                 app.toast_error(format!("Could not open folder: {e}"));
@@ -109,6 +113,16 @@ pub fn perform(app: &mut App, action: MenuAction, song: &Song, context: &[Song])
             app.confirm_delete = Some(song.clone());
         }
     }
+}
+
+/// Jump to the Playlists page with the song's folder selected; the order
+/// list scrolls to the song and highlights it (`PlaylistsUi.reveal`).
+pub fn reveal_in_playlist(app: &mut App, song: &Song) {
+    let Some(folder) = song.path.parent() else { return };
+    app.playlists.selected = Some(folder.to_path_buf());
+    app.playlists.filter.clear();
+    app.playlists.reveal = Some(song.id);
+    app.navigate(crate::domain::Screen::Playlists);
 }
 
 /// Windows Explorer with the file selected; other platforms open the folder.

@@ -21,6 +21,8 @@ pub struct RowAction {
     pub remove_clicked: bool,
     /// Entry picked in the right-click menu this frame.
     pub menu: Option<MenuAction>,
+    /// The location pill (`RowOptions::location`) was clicked.
+    pub location_clicked: bool,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -31,6 +33,9 @@ pub struct RowOptions {
     pub dim: bool,
     /// Offer "Delete file" in the right-click menu.
     pub can_delete: bool,
+    /// Where the song lives (its playlist folder), shown as a clickable pill
+    /// at the end of the title cell. Search results use it.
+    pub location: Option<&'static str>,
 }
 
 pub fn draw(ui: &mut Ui, index: usize, song: &Song, is_current: bool) -> RowAction {
@@ -98,6 +103,19 @@ pub fn draw_with_options(
         ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::click());
     let c = cells(rect, opts.show_remove);
     let hovered = response.hovered();
+    // Location pill: right-aligned inside the title cell, at most 45% of it.
+    let location_rect = opts.location.filter(|l| !l.is_empty()).map(|l| {
+        let text_w = ui.fonts(|f| {
+            f.layout_no_wrap(l.to_string(), theme::sans(theme::TEXT_CAPTION), pal.ink)
+                .size()
+                .x
+        });
+        let w = (text_w + 2.0 * theme::SPACE_2).min(c.title.width() * 0.45);
+        Rect::from_min_size(
+            egui::pos2(c.title.right() - w, c.title.center().y - 10.0),
+            vec2(w, 20.0),
+        )
+    });
 
     if ui.is_rect_visible(rect) {
         let bg = if is_current {
@@ -147,7 +165,28 @@ pub fn draw_with_options(
         } else {
             theme::sans(theme::TEXT_BODY)
         };
-        widgets::paint_truncated(ui, c.title, &song.title, title_font, title_c, Align::Min);
+        let mut title_cell = c.title;
+        if let Some(rect) = location_rect {
+            title_cell.set_right(rect.left() - theme::SPACE_2);
+            let hot = ui
+                .input(|i| i.pointer.hover_pos())
+                .is_some_and(|p| rect.contains(p));
+            let (fill, ink) = if hot {
+                (pal.accent_soft, pal.accent_soft_ink)
+            } else {
+                (pal.surface_sunk, pal.ink_2)
+            };
+            ui.painter().rect_filled(rect, Rounding::same(theme::RADIUS_SM), fill);
+            widgets::paint_truncated(
+                ui,
+                rect.shrink2(vec2(theme::SPACE_2, 0.0)),
+                opts.location.unwrap_or_default(),
+                theme::sans(theme::TEXT_CAPTION),
+                ink,
+                Align::Min,
+            );
+        }
+        widgets::paint_truncated(ui, title_cell, &song.title, title_font, title_c, Align::Min);
         widgets::paint_truncated(
             ui,
             c.time,
@@ -178,10 +217,15 @@ pub fn draw_with_options(
     }
 
     let menu = song_menu::show(&response, song, opts.can_delete);
+    let location_clicked = response.clicked()
+        && location_rect.is_some_and(|r| {
+            response.interact_pointer_pos().is_some_and(|p| r.contains(p))
+        });
 
     RowAction {
-        clicked: response.clicked() && !remove_clicked,
+        clicked: response.clicked() && !remove_clicked && !location_clicked,
         remove_clicked,
         menu,
+        location_clicked,
     }
 }
