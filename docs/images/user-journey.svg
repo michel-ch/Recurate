@@ -3,7 +3,7 @@
       <title id="user-journey-title">Recurate user journey</title>
       <desc id="user-journey-desc">User journey map across six stages, from launching the player through browsing, listening, curating, acquiring new audio, and settings, with sentiment dipping at Browse and lowest at Acquire where the yt-dlp bot wall forces a cookies setting.</desc>
       <defs>
-        <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap');</style>
+        <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');</style>
         <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
         <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
         <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
@@ -60,8 +60,8 @@
 <rect x="640" y="332" width="136" height="16" rx="2" fill="#b3502f" fill-opacity="0.08" stroke="#b3502f" stroke-opacity="0.50" stroke-width="0.8" stroke-dasharray="3,3"/>
 <text x="708" y="344" fill="#B3502F" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">BOT WALL → COOKIES_BROWSER</text>
 <text x="132" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">status bar</text>
-<text x="276" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">top_bar · AllSongs</text>
-<text x="276" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">filter + sort</text>
+<text x="276" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">sidebar · AllSongs</text>
+<text x="276" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">search + sort</text>
 <text x="420" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">mini player</text>
 <text x="420" y="400" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">NowPlaying</text>
 <text x="564" y="388" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">Folders · Duplicates</text>

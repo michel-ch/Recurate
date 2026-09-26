@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg viewBox="0 0 960 536" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="component-tree-title component-tree-desc">
       <title id="component-tree-title">Recurate ui::App component tree</title>
-      <desc id="component-tree-desc">Tree of the egui frame: App::update draws the central panel, top bar, toasts and mini player; the central panel renders the library, playlists or now-playing screen, each collapsed to its widget functions, with tags marking which nodes read library or playback data.</desc>
+      <desc id="component-tree-desc">Tree of the egui frame: App::update draws the central panel, sidebar, toasts with the song dialogs, and mini player; the central panel renders the library, playlists or now-playing screen, each collapsed to its widget functions, with tags marking which nodes read library or playback data.</desc>
       <defs>
-        <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap');</style>
+        <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');</style>
         <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6B6356"/></marker>
         <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#B3502F"/></marker>
         <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5C6B3F"/></marker>
@@ -39,14 +39,14 @@
 <text x="300" y="169" fill="#33302A" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PANEL</text>
 <rect x="432" y="160" width="32" height="12" rx="2" fill="none" stroke="#5C6B3F" stroke-width="0.8"/>
 <text x="448" y="169" fill="#5C6B3F" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DATA</text>
-<text x="372" y="184" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">top_bar::draw</text>
+<text x="372" y="184" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">sidebar::draw</text>
 <rect x="504" y="152" width="200" height="48" rx="6" fill="#F6F3EC"/>
 <rect x="504" y="152" width="200" height="48" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
 <rect x="512" y="160" width="40" height="12" rx="2" fill="none" stroke="#33302a" stroke-opacity="0.40" stroke-width="0.8"/>
 <text x="532" y="169" fill="#33302A" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PANEL</text>
 <rect x="664" y="160" width="32" height="12" rx="2" fill="none" stroke="#5C6B3F" stroke-width="0.8"/>
 <text x="680" y="169" fill="#5C6B3F" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">VIEW</text>
-<text x="604" y="184" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">toasts::draw</text>
+<text x="604" y="184" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">toasts · song dialogs</text>
 <rect x="736" y="152" width="200" height="48" rx="6" fill="#F6F3EC"/>
 <rect x="736" y="152" width="200" height="48" rx="6" fill="#ffffff" stroke="#33302A" stroke-width="1"/>
 <rect x="744" y="160" width="40" height="12" rx="2" fill="none" stroke="#33302a" stroke-opacity="0.40" stroke-width="0.8"/>
@@ -94,7 +94,7 @@
 <text x="216" y="369" fill="#5C6B3F" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">VIEW</text>
 <text x="140" y="380" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">AllSongs pieces</text>
 <text x="140" y="396" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">draw_header · draw_sort_picker</text>
-<text x="140" y="408" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">song_row::draw ×50</text>
+<text x="140" y="408" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">song_row ×50 · song_menu</text>
 <text x="140" y="420" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">pagination</text>
 <rect x="272" y="352" width="200" height="96" rx="6" fill="#F6F3EC"/>
 <rect x="272" y="352" width="200" height="96" rx="6" fill="#33302a" fill-opacity="0.05" stroke="#6B6356" stroke-width="0.8"/>
@@ -105,8 +105,8 @@
 <text x="372" y="380" fill="#33302A" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Playlists pieces</text>
 <text x="372" y="396" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">draw_folder_list · draw_editor</text>
 <text x="372" y="408" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">draw_add_songs · draw_reorder</text>
-<text x="372" y="420" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">draw_batch_status</text>
-<text x="372" y="432" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">draw_duplicate_prompt</text>
+<text x="372" y="420" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">batch_status · duplicate_prompt</text>
+<text x="372" y="432" fill="#6B6356" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0">play all · filter · song_menu</text>
 <rect x="504" y="352" width="200" height="96" rx="6" fill="#F6F3EC"/>
 <rect x="504" y="352" width="200" height="96" rx="6" fill="#33302a" fill-opacity="0.05" stroke="#6B6356" stroke-width="0.8"/>
 <rect x="512" y="360" width="44" height="12" rx="2" fill="none" stroke="#6b6356" stroke-opacity="0.50" stroke-width="0.8"/>

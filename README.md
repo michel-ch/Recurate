@@ -170,7 +170,7 @@ Default scan root is `<cwd>/music`, so launching from `player/` picks up
 
 ```bash
 cargo check --all-targets   # Type-check everything (lib + bin + tests)
-cargo test                  # 76 tests across 5 suites
+cargo test                  # 80 tests across 5 suites
 ```
 
 The test suites are pure unit / integration tests — they don't touch
@@ -338,7 +338,8 @@ selected one on the right:
 - **Order** — drag rows by the ☰ handle, use ▲ ▼ / ⇱ First / ⇲ Last, or
   type a track number and target position. Nothing touches disk until
   **Apply order**, which rewrites the `NN - ` prefixes with the
-  renumberer's two-phase rename.
+  renumberer's two-phase rename. Right-click a title for the song menu
+  (Play next, Add to queue, Show in folder, Properties…).
 - **Duplicates** — if a pasted line resolves to a song already in the playlist
   (same title and artist), a dialog lists them and lets you skip or download
   anyway.
@@ -416,6 +417,15 @@ EQ screen is the UI for tuning it.)
 ---
 
 ## Common workflows
+
+### "Which playlist is this song in?"
+
+1. Type any part of the title, artist or file name in the search field on
+   **Songs** (`Ctrl+F`).
+2. Each result shows its playlist as a pill at the end of the title.
+3. Click the pill (or right-click → **Go to playlist**): the Playlists
+   page opens on that folder, scrolled to the song, with the row
+   highlighted.
 
 ### "I just got this app — how do I import my existing library?"
 

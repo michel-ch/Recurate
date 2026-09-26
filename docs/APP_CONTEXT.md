@@ -94,14 +94,15 @@ Each entry lists: purpose, what it shows, every control, and behaviours the desi
 ### 4.1 Songs (AllSongs) — default screen
 
 - **Purpose**: browse and play the whole destination library.
-- **Header**: title "Songs", search text field (filters title/artist/album live), sort dropdown (8 options above).
+- **Header**: title "Songs", search field (every word must match the title, artist, album, file name or folder name; result count and a clear button while active; `Ctrl+F` focuses, `Esc` clears; the page resets to 1 when the query changes), sort dropdown (8 options above).
 - **Pagination**: 50 rows per page. Controls: `◀ Prev`, label "Page X / Y (a–b of N)", `Next ▶`. Page is clamped when the filter shrinks the list.
-- **Rows** (shared `song_row` component, see §5): row number, ▶ play button, title, then right-aligned cluster: duration · artist (truncated). Click anywhere on the row → play from that row with the current page's list as the queue. Currently-playing row is highlighted.
+- **Rows** (shared `song_row` component, see §5): row number (▶ on hover), art tile, title, duration, artist (truncated), ✕ delete. Click anywhere on the row → play from that row with the current list as the queue. Currently-playing row is highlighted. Right-click → song menu (§5).
+- **While searching**: each row shows a pill with the playlist (folder) the song lives in; clicking it opens that playlist scrolled to the song.
 - Constraint: the list is virtualised; with 2,457 songs nothing may re-sort or re-filter every frame.
 
 ### 4.2 Search
 
-Same as Songs without pagination: header "Search", the same live filter, full virtualised list of matches.
+Same as Songs without pagination: header "Search", the same live filter, full virtualised list of matches. The playlist pill is always shown here.
 
 ### 4.3 Albums / Album detail
 
@@ -130,7 +131,7 @@ Same as Songs without pagination: header "Search", the same live filter, full vi
 
 ### 4.8 Mini player (persistent bottom bar)
 
-- "Nothing playing" or: `⏮`, `▶/⏸`, `⏭`, seek slider, `pos / dur`, volume slider 0–1 labelled "Vol", `Now Playing` button.
+- 72 px bar: art tile, title and "artist · folder", then shuffle, `⏮`, round `▶/⏸`, `⏭`, repeat, seek slider between `pos` and `dur`, volume slider, `Now Playing ↗` button. Shown on every screen except Now Playing.
 
 ### 4.9 Playlists (hub — the most important new screen)
 
@@ -155,11 +156,12 @@ Same as Songs without pagination: header "Search", the same live filter, full vi
   - **Batch status** (while downloads are in flight): counts Pending / Done / Failed (colour-coded), `⏸ Pause` / `▶ Resume` for the shared download worker, "(N queued)". Failed items show their error. When the last item lands the folder is renumbered so failed downloads leave no gap.
 
   **b) Order** (the track list)
-  - Caption "Order" + hint "drag rows, or use the buttons; nothing is renamed until you apply".
-  - One row per song: drag handle `☰`, position number, title, artist (truncated), then buttons `▲` `▼` `⇱ First` `⇲ Last` `✕`.
+  - Caption "Order" + hint "drag rows, or use the buttons; nothing is renamed until you apply", then `Apply order (rename files)` and `Revert` (the row wraps when the panel is narrow).
+  - Playback + search row: `▶ Play all` (primary), `⤮ Shuffle`, and a "Search this playlist" field with an "N of M" count and a clear button. Filtered rows keep their real position numbers; drag-and-drop is ignored while filtering.
+  - One row per song: drag handle `☰`, position number, `▶` (plays the playlist from this song; `⏸`/`▶` on the loaded song toggles pause), title (double-click plays, right-click opens the song menu), artist (truncated), duration, then buttons `▲` `▼` `⇱ First` `⇲ Last` `✕`. The playing song is tinted; a song reached through "Go to playlist" is scrolled into view and tinted.
   - Drag-and-drop reorder between rows.
   - `Move track` row below the list: `from [n]` `to [n]` numeric inputs (1..N) + `Move` button.
-  - `Apply order` button (primary; enabled only when the working order differs from disk and no batch is in flight) and `Reset` (discard edits). Applying renames files via a two-phase temp rename so numbers become `01..N`.
+  - `Apply order` (enabled only when the working order differs from disk and no batch is in flight) and `Revert` (discard edits). Applying renames files via a two-phase temp rename so numbers become `01..N`. Playing from this page uses the working order, applied or not.
   - `✕` deletes the file from disk immediately (with renumber); it is disabled while the order has unapplied edits or a batch is running, because the renumber would invalidate the pending edit.
   - The list always reflects disk: new downloads and deletions appear immediately even while the user has unapplied reorder edits (vanished songs drop out, new ones append at the end).
   - Bottom controls must stay inside the window: the list reserves space for the Move row and action buttons; the list scrolls, the controls do not.
@@ -215,8 +217,14 @@ Same as Songs without pagination: header "Search", the same live filter, full vi
 ## 5. Shared components
 
 **song_row** — the one row widget used by Songs, Search, Albums, Artists, Folders, Queue.
-- Layout: `[28 px #] [▶] [title, fills] … [✕?] [m:ss] [·] [artist]`.
-- The whole row is one click target (play). The trailing cluster is right-aligned and reserved (max 60 % of width) so long titles truncate instead of pushing it off-screen. Optional ✕ with a hover text ("Delete" / "Remove from queue"). Highlight state for the playing row.
+- Layout (40 px): `[# 32] [art 32] [title, fills · optional playlist pill] [m:ss 44] [artist ≤200] [✕ 28?]`.
+- The whole row is one click target (play). The trailing cluster never takes more than 60 % of the width, so long titles truncate instead of pushing it off-screen. Optional ✕ with a hover text ("Delete" / "Remove from queue"). Highlight state for the playing row.
+
+**Song menu** (right-click on any song row, including the playlist order list): `▶ Play`, `Play next`, `Add to queue`, `Go to playlist`, `Show in folder` (Explorer with the file selected), `Copy full path`, `Properties…`, and `Delete file…` where the list owns the file (not in the Queue).
+
+**Properties dialog** — modal: file name, folder, full path, size (with exact bytes), modified time (UTC), duration, title, artist, album, album artist, track, year, genre, composer, cover art embedded or not. Buttons: `Copy full path`, `Show in folder`, `Close` (Esc closes). File metadata is read once when the dialog opens.
+
+**Delete confirmation** — modal with the title and full path, `Delete` (danger) / `Cancel`; deleting renumbers the folder.
 
 **Seek slider** — shared by mini player and Now Playing; stashes the in-flight drag value and commits on release.
 
@@ -230,12 +238,13 @@ Same as Songs without pagination: header "Search", the same live filter, full vi
 
 ## 6. Key user flows
 
-1. **Listen**: Songs → filter/sort → click row → mini player shows transport → Now Playing for the big view. Space / Ctrl+arrows work anywhere outside text fields.
-2. **Build a playlist from links**: Playlists → New playlist name → create → paste lines → Find & download → (answer duplicate prompt) → watch Pending/Done/Failed → songs appear in Order list numbered → optionally drag / First / Last / Move → Apply order.
-3. **Import a YouTube playlist**: Playlist → paste URL → Fetch → adjust folder name → Download N → files land as `NN - Title - Artist.mp3` in `<dest>/<folder>/`.
-4. **Replace bad rips**: Missing → Copy all (bootstrap destination from source) → Replacer → pick folders → Search all → Start replace top match → repeat as searches finish.
-5. **Clean duplicates**: Duplicates → wait for fingerprinting → review groups → delete per song or bulk "keep highest name" with confirmation.
-6. **Delete a song**: Folders or Playlists ✕ → file removed → folder renumbered → all lists refresh.
+1. **Listen**: Songs → filter/sort → click row → mini player shows transport → Now Playing for the big view. Space / Ctrl+arrows work anywhere outside text fields. A playlist plays from Playlists → `▶ Play all` / `⤮ Shuffle` / a row's `▶`.
+2. **Find where a song lives**: Songs → type in search → click the playlist pill on a result (or right-click → Go to playlist) → Playlists opens on that folder, scrolled to the song.
+3. **Build a playlist from links**: Playlists → New playlist name → create → paste lines → Find & download → (answer duplicate prompt) → watch Pending/Done/Failed → songs appear in Order list numbered → optionally drag / First / Last / Move → Apply order.
+4. **Import a YouTube playlist**: Playlist → paste URL → Fetch → adjust folder name → Download N → files land as `NN - Title - Artist.mp3` in `<dest>/<folder>/`.
+5. **Replace bad rips**: Missing → Copy all (bootstrap destination from source) → Replacer → pick folders → Search all → Start replace top match → repeat as searches finish.
+6. **Clean duplicates**: Duplicates → wait for fingerprinting → review groups → delete per song or bulk "keep highest name" with confirmation.
+7. **Delete a song**: Folders or Playlists ✕, or right-click → Delete file… and confirm on any library list → file removed → folder renumbered → all lists refresh.
 
 ---
 
@@ -249,7 +258,7 @@ Same as Songs without pagination: header "Search", the same live filter, full vi
 - **Audio-only**: no video fallback in search results; remix tags (Slowed/Reverb/…) preserved.
 - **Every user-triggered failure gets a toast**; long-running background work shows in the status bar.
 - **Text**: long, Unicode-heavy titles; truncate, never overflow; CJK fallback font.
-- **Keyboard**: Space, Ctrl+→, Ctrl+← gated on no text field focus; avoid bare arrow keys (scroll areas use them).
+- **Keyboard**: Space, Ctrl+→, Ctrl+← gated on no text field focus; Ctrl+F focuses the library search, Esc clears it or closes a dialog; avoid bare arrow keys (scroll areas use them).
 - **Bottom controls must stay within the window** on every screen at modest window sizes (~1000×700).
 - **Two-click confirmation** for bulk destructive actions.
 - **No accounts, no network except yt-dlp/YouTube API calls.**
@@ -259,7 +268,7 @@ Same as Songs without pagination: header "Search", the same live filter, full vi
 ## 8. Technical stack (for the implementer, not the designer)
 
 - Rust 2021, `eframe`/`egui` 0.28, `cpal`, `symphonia`, `lofty` (tags), `crossbeam_channel`, `serde`, `tracing`.
-- Source layout: `player/src/{main,lib}.rs`, `data/` (scanner, tags, fingerprint, duplicates, library), `engine/` + `playback/` (decode/output/queue), `replacer/` (title cleaner, YouTube search, scoring, download, playlist fetch, link-list parser, resolver, sync), `renumberer.rs`, `ui/{app,fonts,toasts}.rs`, `ui/components/{top_bar,mini_player,song_row}.rs`, `ui/screens/{library,now_playing,queue,settings,replacer,duplicates,missing,playlist,playlists}.rs`, `domain/model.rs` (`Song`, `PlaybackState`, `Screen`, `SortOption`, `RepeatMode`).
+- Source layout: `player/src/{main,lib}.rs`, `data/` (scanner, tags, fingerprint, duplicates, library), `engine/` + `playback/` (decode/output/queue), `replacer/` (title cleaner, YouTube search, scoring, download, playlist fetch, link-list parser, resolver, sync), `renumberer.rs`, `ui/{app,fonts,theme,toasts,widgets}.rs`, `ui/components/{sidebar,mini_player,song_row,song_menu}.rs`, `ui/screens/{library,now_playing,queue,settings,replacer,duplicates,missing,playlist,playlists}.rs`, `domain/model.rs` (`Song`, `PlaybackState`, `Screen`, `SortOption`, `RepeatMode`).
 - `Screen` enum: Library, AllSongs, AlbumsList, AlbumDetail(name), ArtistsList, ArtistDetail(name), Folders, Playlists, NowPlaying, Equalizer, Search, Queue, Replacer, Duplicates, Missing, Playlist, Settings.
 - Launch: `start.bat` at repo root, or `cargo run --release` from `player/`. 68 tests via `cargo test`.
 - A UI rewrite that keeps egui should keep the `App` struct's cached views and worker APIs; a rewrite in another toolkit (e.g. Tauri/web) would keep everything under `data/`, `engine/`, `replacer/`, `renumberer.rs` as the backend and replace `ui/` only.
