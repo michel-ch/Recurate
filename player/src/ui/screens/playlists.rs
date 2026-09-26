@@ -543,7 +543,10 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
     let batch_here =
         !app.playlists.queued_ids.is_empty() && app.playlists.batch_folder.as_ref() == Some(folder);
 
-    ui.horizontal(|ui| {
+    // Wrapped, not `horizontal`: a row wider than the panel makes egui widen
+    // the whole panel, which pushed every song row's buttons (✕, Last,
+    // First) past the visible edge.
+    ui.horizontal_wrapped(|ui| {
         ui.label(egui::RichText::new("Order").strong());
         ui.label(
             egui::RichText::new("drag rows, or use the buttons; nothing is renamed until you apply")
@@ -565,11 +568,31 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         }
     });
 
+    let mut play_from: Option<usize> = None;
+    let mut play_shuffled = false;
+    let mut toggle_pause = false;
+    let state = app.playback.state_snapshot();
+    let current_id = state.current_song.as_ref().map(|s| s.id);
+    let is_playing = state.is_playing;
+
     // Search within this playlist. While a filter is active the rows keep
     // their real position numbers but drag-and-drop is ignored: dropping
     // between two visible rows says nothing about the hidden ones.
-    ui.horizontal(|ui| {
-        crate::ui::widgets::search_input(ui, &mut app.playlists.filter, "Search this playlist", 260.0);
+    ui.horizontal_wrapped(|ui| {
+        if crate::ui::widgets::primary_button_sm(ui, true, "▶ Play all")
+            .on_hover_text("Play this playlist from the first song, in the order shown")
+            .clicked()
+        {
+            play_from = Some(0);
+        }
+        if crate::ui::widgets::secondary_button_sm(ui, true, "⤮ Shuffle")
+            .on_hover_text("Play this playlist in a random order")
+            .clicked()
+        {
+            play_shuffled = true;
+        }
+        ui.add_space(crate::ui::theme::SPACE_3);
+        crate::ui::widgets::search_input(ui, &mut app.playlists.filter, "Search this playlist", 220.0);
         if !app.playlists.filter.is_empty() {
             let shown = app
                 .playlists
@@ -617,15 +640,17 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         }
     }
     let highlight = app.playlists.highlight;
-    let accent_soft = crate::ui::widgets::p(ui).accent_soft;
+    let pal = crate::ui::widgets::p(ui);
+    let accent_soft = pal.accent_soft;
     scroll.show_rows(ui, row_h, visible.len(), |ui, range| {
             for k in range {
                 let i = visible[k];
                 let song = &rows[i];
                 let (song_id, title, artist) = (&song.id, &song.title, &song.artist);
                 let id = egui::Id::new(("pl_row", folder, *song_id));
+                let is_current = current_id == Some(*song_id);
                 let mut frame = egui::Frame::none().inner_margin(2.0);
-                if highlight == Some(*song_id) {
+                if highlight == Some(*song_id) || is_current {
                     frame = frame.fill(accent_soft).rounding(crate::ui::theme::RADIUS_SM);
                 }
                 let (_, dropped) = ui.dnd_drop_zone::<usize, ()>(frame, |ui| {
@@ -634,11 +659,50 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                             ui.label(egui::RichText::new("☰").weak());
                             ui.label(format!("{:02}", i + 1));
                         });
-                        let title_w = (ui.available_width() - 290.0).max(40.0);
-                        let r = ui.add_sized(
-                            [title_w, row_h],
-                            egui::Label::new(title).truncate().sense(egui::Sense::click()),
-                        );
+                        // ▶ plays the playlist from this song; on the song
+                        // that is already loaded it toggles play / pause.
+                        let (glyph, hover) = if is_current && is_playing {
+                            ("⏸", "Pause")
+                        } else if is_current {
+                            ("▶", "Resume")
+                        } else {
+                            ("▶", "Play from here")
+                        };
+                        let glyph_c = if is_current { pal.accent } else { pal.ink_2 };
+                        if crate::ui::widgets::icon_button(ui, glyph, 22.0, glyph_c)
+                            .on_hover_text(hover)
+                            .clicked()
+                        {
+                            if is_current {
+                                toggle_pause = true;
+                            } else {
+                                play_from = Some(i);
+                            }
+                        }
+                        let title_w = (ui.available_width() - 340.0).max(40.0);
+                        let title_text = if is_current {
+                            egui::RichText::new(title).color(pal.accent_soft_ink).strong()
+                        } else {
+                            egui::RichText::new(title)
+                        };
+                        let r = ui
+                            .allocate_ui_with_layout(
+                                egui::vec2(title_w, row_h),
+                                egui::Layout::left_to_right(egui::Align::Center),
+                                |ui| {
+                                    ui.set_min_width(title_w);
+                                    ui.add(
+                                        egui::Label::new(title_text)
+                                            .truncate()
+                                            .sense(egui::Sense::click()),
+                                    )
+                                },
+                            )
+                            .inner
+                            .on_hover_text("Double-click to play, right-click for more");
+                        if r.double_clicked() {
+                            play_from = Some(i);
+                        }
                         if let Some(a) = song_menu::show(&r, song, can_delete) {
                             menu = Some((a, i));
                         }
@@ -668,6 +732,11 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                             if ui.add_enabled(i > 0, egui::Button::new("▲").small()).clicked() {
                                 mv = Some((i, i - 1));
                             }
+                            ui.label(
+                                egui::RichText::new(song.formatted_duration())
+                                    .font(crate::ui::theme::mono(crate::ui::theme::TEXT_CAPTION))
+                                    .color(pal.ink_2),
+                            );
                             let artist_w = ui.available_width().max(20.0);
                             ui.add_sized(
                                 [artist_w, row_h],
@@ -686,6 +755,15 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
 
     if let Some((a, i)) = menu {
         song_menu::perform(app, a, &rows[i], &rows);
+    }
+    if toggle_pause {
+        app.playback.play_pause();
+    }
+    if let Some(i) = play_from {
+        app.playback.play_songs(rows.clone(), i, None);
+    }
+    if play_shuffled {
+        app.playback.play_songs(shuffled(rows.clone()), 0, None);
     }
 
     ui.horizontal(|ui| {
@@ -715,6 +793,24 @@ fn draw_reorder(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         // handle_delete renumbers + refreshes; ids changed, so reload from disk.
         app.playlists.order_folder = None;
     }
+}
+
+/// Fisher-Yates with a time-seeded xorshift: good enough for picking a play
+/// order, and avoids a `rand` dependency for one call site.
+fn shuffled(mut songs: Vec<Song>) -> Vec<Song> {
+    let mut x = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0x9E37_79B9_7F4A_7C15)
+        | 1;
+    for i in (1..songs.len()).rev() {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        let j = (x % (i as u64 + 1)) as usize;
+        songs.swap(i, j);
+    }
+    songs
 }
 
 fn is_dirty(app: &mut App, folder: &PathBuf) -> bool {
@@ -770,6 +866,14 @@ fn apply_order(app: &mut App, folder: &PathBuf) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shuffled_keeps_every_song_once() {
+        let songs: Vec<Song> = (0..50).map(|i| song(i, &format!("{i:02} - s.mp3"))).collect();
+        let mut ids: Vec<i64> = shuffled(songs).iter().map(|s| s.id).collect();
+        ids.sort();
+        assert_eq!(ids, (0..50).collect::<Vec<i64>>());
+    }
     use std::time::Duration;
 
     fn song(id: i64, name: &str) -> Song {

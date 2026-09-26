@@ -345,6 +345,13 @@ selected one on the right:
 - **Delete** — ✕ on a row deletes the file and renumbers the folder. Apply or
   revert pending order edits first.
 
+**Playing a playlist:** **▶ Play all** plays the folder in the order shown
+(including unapplied reorder edits), **⤮ Shuffle** plays it in a random
+order. Each row has its own **▶** to play the playlist from that song
+(on the song already loaded it pauses / resumes), double-clicking a title
+does the same, and the playing song is tinted. Durations sit next to the
+artist.
+
 **Search this playlist:** the field above the order list filters the rows
 (same word-wise matching as the Songs page); rows keep their real position
 numbers and the move buttons still work, but drag-and-drop is ignored
