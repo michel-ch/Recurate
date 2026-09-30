@@ -235,7 +235,11 @@ fn rename_playlist(app: &mut App, folder: &PathBuf, new_name: &str) {
     if &target == folder {
         return;
     }
-    if target.exists() {
+    // Windows paths are case-insensitive, so `exists()` is true for a
+    // case-only rename ("hardstyle" -> "Hardstyle"); that one is allowed.
+    let same_file = crate::data::normalize_path_key(&target)
+        == crate::data::normalize_path_key(folder);
+    if target.exists() && !same_file {
         app.toast_error(format!("{} already exists", target.display()));
         return;
     }
