@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
 use lofty::config::WriteOptions;
@@ -13,7 +12,7 @@ use crate::data::tags::split_prefix;
 pub fn ffmpeg_available() -> bool {
     static CACHE: OnceCell<bool> = OnceCell::new();
     *CACHE.get_or_init(|| {
-        Command::new("ffmpeg")
+        super::command("ffmpeg")
             .arg("-version")
             .output()
             .map(|o| o.status.success())
@@ -42,7 +41,7 @@ pub fn download_audio_mp3(
 
     let _ = std::fs::remove_file(&tmp_mp3);
 
-    let mut cmd = Command::new("yt-dlp");
+    let mut cmd = super::command("yt-dlp");
     cmd.args([
         "-x",
         "--audio-format",

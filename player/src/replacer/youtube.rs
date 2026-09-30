@@ -1,4 +1,3 @@
-use std::process::Command;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
@@ -55,7 +54,7 @@ pub fn search_ytdlp(
     let n = max_results.clamp(1, 25);
     let term = format!("ytsearch{n}:{query}");
 
-    let mut cmd = Command::new("yt-dlp");
+    let mut cmd = super::command("yt-dlp");
     cmd.args([
         "--dump-json",
         "--flat-playlist",
@@ -96,7 +95,7 @@ pub fn search_ytdlp(
 pub fn ytdlp_available() -> bool {
     static CACHE: OnceCell<bool> = OnceCell::new();
     *CACHE.get_or_init(|| {
-        Command::new("yt-dlp")
+        super::command("yt-dlp")
             .arg("--version")
             .output()
             .map(|o| o.status.success())

@@ -8,7 +8,6 @@
 //! unchanged.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
@@ -67,7 +66,7 @@ pub fn fetch_playlist(url: &str, cookies_browser: Option<&str>) -> Result<Playli
     if url.is_empty() {
         return Err(anyhow!("playlist URL is empty"));
     }
-    let mut cmd = Command::new("yt-dlp");
+    let mut cmd = super::command("yt-dlp");
     cmd.args([
         "--flat-playlist",
         "--dump-single-json",
