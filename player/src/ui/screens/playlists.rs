@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -40,7 +40,13 @@ fn flag_duplicates(items: &[crate::replacer::resolve::Resolved], existing: &[Son
 pub struct PlaylistsUi {
     pub selected: Option<PathBuf>,
     pub new_name: String,
-    pub paste_text: String,
+    /// Paste field contents, kept per playlist so switching folders doesn't
+    /// carry one list's links into another.
+    pub paste_text: HashMap<PathBuf, String>,
+    /// Inline rename field for the selected playlist (`None` = not editing).
+    pub rename: Option<String>,
+    /// Playlist folder waiting for the delete confirmation.
+    pub confirm_delete: Option<PathBuf>,
     pub resolve: ResolveJob,
     pub last_outcomes: Vec<crate::replacer::resolve::LineOutcome>,
     /// Folder the in-flight resolve / download batch was started for. Captured
@@ -84,6 +90,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
 
     poll_batch(ui.ctx(), app);
     draw_duplicate_prompt(ui.ctx(), app);
+    draw_delete_prompt(ui.ctx(), app);
 
     let dest_root: PathBuf = app
         .settings
@@ -181,13 +188,138 @@ fn draw_folder_list(ui: &mut egui::Ui, app: &mut App, dest_root: &PathBuf) {
 }
 
 fn draw_editor(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
-    ui.heading(folder.file_name().and_then(|s| s.to_str()).unwrap_or("?"));
+    let name = folder.file_name().and_then(|s| s.to_str()).unwrap_or("?").to_string();
+    let busy = app.playlists.batch_folder.as_ref() == Some(folder)
+        && (!app.playlists.queued_ids.is_empty()
+            || app.playlists.resolve.running.load(std::sync::atomic::Ordering::Relaxed));
+    ui.horizontal_wrapped(|ui| {
+        if let Some(draft) = app.playlists.rename.as_mut() {
+            let r = crate::ui::widgets::text_input(ui, draft, "Playlist name", 260.0);
+            let submit = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            let draft = draft.trim().to_string();
+            if crate::ui::widgets::primary_button_sm(ui, !draft.is_empty(), "Save").clicked() || submit {
+                app.playlists.rename = None;
+                rename_playlist(app, folder, &draft);
+            } else if crate::ui::widgets::secondary_button_sm(ui, true, "Cancel").clicked()
+                || ui.input(|i| i.key_pressed(egui::Key::Escape))
+            {
+                app.playlists.rename = None;
+            }
+        } else {
+            ui.heading(&name);
+            if crate::ui::widgets::secondary_button_sm(ui, !busy, "Rename")
+                .on_hover_text("Renames the folder on disk")
+                .clicked()
+            {
+                app.playlists.rename = Some(name.clone());
+            }
+            if crate::ui::widgets::danger_button(ui, !busy, "Delete playlist…")
+                .on_hover_text("Deletes the folder and every file in it, after confirmation")
+                .clicked()
+            {
+                app.playlists.confirm_delete = Some(folder.clone());
+            }
+        }
+    });
     ui.label(egui::RichText::new(folder.display().to_string()).weak());
     ui.separator();
 
     draw_add_songs(ui, app, folder);
     ui.separator();
     draw_reorder(ui, app, folder);
+}
+
+fn rename_playlist(app: &mut App, folder: &PathBuf, new_name: &str) {
+    let Some(parent) = folder.parent() else { return };
+    let target = crate::replacer::playlist::dest_folder(parent, new_name);
+    if &target == folder {
+        return;
+    }
+    if target.exists() {
+        app.toast_error(format!("{} already exists", target.display()));
+        return;
+    }
+    // Songs in the folder get new paths (and ids); drop them from the queue
+    // rather than leave stale entries that can no longer be opened.
+    for s in app.library.songs_in_folder(folder) {
+        app.playback.remove_from_queue(s.id);
+    }
+    match std::fs::rename(folder, &target) {
+        Ok(()) => {
+            let _ = app.library.refresh_folder(folder);
+            if let Err(e) = app.library.refresh_folder(&target) {
+                tracing::warn!("refresh renamed playlist failed: {e:#}");
+            }
+            app.cached_folders = None;
+            app.playlists.selected = Some(target.clone());
+            if let Some(text) = app.playlists.paste_text.remove(folder) {
+                app.playlists.paste_text.insert(target.clone(), text);
+            }
+            app.toast_info(format!("Renamed to {new_name}"));
+        }
+        Err(e) => app.toast_error(format!("Rename failed: {e}")),
+    }
+}
+
+/// Modal behind **Delete playlist…**: names the folder and the file count so
+/// the user sees exactly what disappears before confirming.
+fn draw_delete_prompt(ctx: &egui::Context, app: &mut App) {
+    let Some(folder) = app.playlists.confirm_delete.clone() else { return };
+    let name = folder.file_name().and_then(|s| s.to_str()).unwrap_or("?").to_string();
+    let count = app.library.songs_in_folder(&folder).len();
+    let mut decision: Option<bool> = None;
+    crate::ui::widgets::modal(ctx, "playlist_delete", "Delete playlist?", 480.0, |ui| {
+        let pal = crate::ui::widgets::p(ui);
+        ui.label(egui::RichText::new(&name).font(crate::ui::theme::semibold(crate::ui::theme::TEXT_BODY)));
+        ui.label(
+            egui::RichText::new(folder.display().to_string())
+                .font(crate::ui::theme::mono(crate::ui::theme::TEXT_CAPTION))
+                .color(pal.ink_2),
+        );
+        ui.add_space(crate::ui::theme::SPACE_2);
+        ui.label(
+            egui::RichText::new(format!(
+                "The folder and its {count} file(s) are removed from disk. This cannot be undone."
+            ))
+            .color(pal.critical),
+        );
+        ui.add_space(crate::ui::theme::SPACE_4);
+        ui.horizontal(|ui| {
+            if crate::ui::widgets::danger_button(ui, true, &format!("Delete {count} file(s)")).clicked() {
+                decision = Some(true);
+            }
+            if crate::ui::widgets::secondary_button(ui, true, "Cancel").clicked() {
+                decision = Some(false);
+            }
+        });
+    });
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        decision = Some(false);
+    }
+    match decision {
+        Some(true) => {
+            app.playlists.confirm_delete = None;
+            for s in app.library.songs_in_folder(&folder) {
+                app.playback.remove_from_queue(s.id);
+            }
+            let result = std::fs::remove_dir_all(&folder);
+            // Partial deletes are possible; refresh shows whatever is left.
+            let _ = app.library.refresh_folder(&folder);
+            app.cached_folders = None;
+            match result {
+                Ok(()) => {
+                    app.playlists.paste_text.remove(&folder);
+                    if app.playlists.selected.as_ref() == Some(&folder) {
+                        app.playlists.selected = None;
+                    }
+                    app.toast_info(format!("Deleted playlist {name}"));
+                }
+                Err(e) => app.toast_error(format!("Delete failed: {e}")),
+            }
+        }
+        Some(false) => app.playlists.confirm_delete = None,
+        None => {}
+    }
 }
 
 fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
@@ -199,7 +331,7 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
              \"Powfu death bed\". Titles are matched to the best audio-only result.",
         );
         ui.add(
-            egui::TextEdit::multiline(&mut app.playlists.paste_text)
+            egui::TextEdit::multiline(app.playlists.paste_text.entry(folder.clone()).or_default())
                 .desired_rows(5)
                 .desired_width(f32::INFINITY)
                 .hint_text("https://youtu.be/…\nArtist song name\n…"),
@@ -215,7 +347,8 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
         };
 
         ui.horizontal(|ui| {
-            let lines = parse_lines(&app.playlists.paste_text);
+            let lines =
+                parse_lines(app.playlists.paste_text.get(folder).map_or("", String::as_str));
             let batch_in_flight =
                 !app.playlists.queued_ids.is_empty() || app.playlists.pending_batch.is_some();
             let can = !resolving
@@ -240,7 +373,7 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
                 ui.label(egui::RichText::new("resolving…").weak());
             }
             if ui.button("Clear").clicked() {
-                app.playlists.paste_text.clear();
+                app.playlists.paste_text.remove(folder);
                 app.playlists.last_outcomes.clear();
             }
         });
@@ -249,8 +382,10 @@ fn draw_add_songs(ui: &mut egui::Ui, app: &mut App, folder: &PathBuf) {
             draw_batch_status(ui, app);
         }
 
-        // Per-line outcome list (failures first so they are visible).
-        if !app.playlists.last_outcomes.is_empty() {
+        // Per-line outcome list, only under the playlist the batch was for.
+        if !app.playlists.last_outcomes.is_empty()
+            && app.playlists.batch_folder.as_ref() == Some(folder)
+        {
             ui.separator();
             for o in &app.playlists.last_outcomes {
                 match &o.result {

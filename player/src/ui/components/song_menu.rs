@@ -27,7 +27,38 @@ pub enum MenuAction {
     ShowInFolder,
     CopyPath,
     Properties,
+    /// Rename the file and edit its tags.
+    Edit,
     Delete,
+}
+
+/// State of the Edit dialog: the working copy of the tags and the file
+/// stem, loaded when the dialog opens.
+#[derive(Clone, Debug)]
+pub struct SongEdit {
+    pub song: Song,
+    pub stem: String,
+    pub tags: crate::data::tags::TagEdit,
+}
+
+impl SongEdit {
+    pub fn load(song: &Song) -> Self {
+        let stem = song
+            .path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
+        let tags = crate::data::tags::TagEdit {
+            title: song.title.clone(),
+            artist: song.artist.clone(),
+            album: song.album.clone(),
+            album_artist: song.album_artist.clone(),
+            year: song.year.map(|y| y.to_string()).unwrap_or_default(),
+            genre: song.genre.clone().unwrap_or_default(),
+        };
+        Self { song: song.clone(), stem, tags }
+    }
 }
 
 fn short_title(t: &str) -> String {
@@ -65,6 +96,7 @@ pub fn show(response: &Response, song: &Song, can_delete: bool) -> Option<MenuAc
         entry(ui, "Show in folder", MenuAction::ShowInFolder);
         entry(ui, "Copy full path", MenuAction::CopyPath);
         entry(ui, "Properties…", MenuAction::Properties);
+        entry(ui, "Edit name and tags…", MenuAction::Edit);
         if can_delete {
             ui.separator();
             if ui
@@ -109,10 +141,39 @@ pub fn perform(app: &mut App, action: MenuAction, song: &Song, context: &[Song])
         MenuAction::Properties => {
             app.song_props = Some(SongProps::load(song));
         }
+        MenuAction::Edit => {
+            app.song_edit = Some(SongEdit::load(song));
+        }
         MenuAction::Delete => {
             app.confirm_delete = Some(song.clone());
         }
     }
+}
+
+/// Write the tags, then rename the file if the stem changed, and refresh
+/// the folder so the library picks up both. A renamed file gets a new id,
+/// so it is dropped from the queue.
+fn save_edit(app: &mut App, edit: &SongEdit) -> anyhow::Result<()> {
+    let path = &edit.song.path;
+    crate::data::tags::write_tags(path, &edit.tags)?;
+    let stem = edit.stem.trim();
+    let old_stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+    if !stem.is_empty() && stem != old_stem {
+        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("mp3");
+        let new_path = path.with_file_name(format!(
+            "{}.{ext}",
+            crate::replacer::playlist::sanitize_filename(stem)
+        ));
+        if new_path.exists() {
+            anyhow::bail!("{} already exists", new_path.display());
+        }
+        std::fs::rename(path, &new_path)?;
+        app.playback.remove_from_queue(edit.song.id);
+    }
+    if let Some(folder) = path.parent() {
+        app.library.refresh_folder(folder)?;
+    }
+    Ok(())
 }
 
 /// Jump to the Playlists page with the song's folder selected; the order
@@ -322,6 +383,59 @@ pub fn draw_dialogs(ctx: &egui::Context, app: &mut App) {
             }
             Some(false) => app.confirm_delete = None,
             None => {}
+        }
+    }
+
+    if let Some(mut edit) = app.song_edit.take() {
+        let mut decision: Option<bool> = None;
+        widgets::modal(ctx, "song_edit", "Edit song", 520.0, |ui| {
+            let pal = widgets::p(ui);
+            let field = |ui: &mut Ui, label: &str, value: &mut String| {
+                ui.label(egui::RichText::new(label).color(pal.ink_3).size(theme::TEXT_CAPTION));
+                widgets::text_input(ui, value, "", f32::INFINITY);
+                ui.end_row();
+            };
+            egui::Grid::new("song_edit_grid")
+                .num_columns(2)
+                .spacing([theme::SPACE_4, theme::SPACE_2])
+                .show(ui, |ui| {
+                    field(ui, "File name", &mut edit.stem);
+                    field(ui, "Title", &mut edit.tags.title);
+                    field(ui, "Artist", &mut edit.tags.artist);
+                    field(ui, "Album", &mut edit.tags.album);
+                    field(ui, "Album artist", &mut edit.tags.album_artist);
+                    field(ui, "Year", &mut edit.tags.year);
+                    field(ui, "Genre", &mut edit.tags.genre);
+                });
+            ui.add_space(theme::SPACE_2);
+            widgets::caption(
+                ui,
+                "Tags are written into the file. Renaming keeps the extension; keep the                  NN - prefix if you want the playlist order to stay.",
+            );
+            ui.add_space(theme::SPACE_4);
+            ui.horizontal(|ui| {
+                if widgets::primary_button(ui, true, "Save").clicked() {
+                    decision = Some(true);
+                }
+                if widgets::secondary_button(ui, true, "Cancel").clicked() {
+                    decision = Some(false);
+                }
+            });
+        });
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            decision = Some(false);
+        }
+        match decision {
+            Some(true) => match save_edit(app, &edit) {
+                Ok(()) => app.toast_info("Song saved"),
+                Err(e) => {
+                    tracing::warn!("edit song failed: {e:#}");
+                    app.toast_error(format!("Could not save: {e}"));
+                    app.song_edit = Some(edit);
+                }
+            },
+            Some(false) => {}
+            None => app.song_edit = Some(edit),
         }
     }
 

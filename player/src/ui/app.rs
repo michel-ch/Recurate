@@ -110,6 +110,7 @@ pub struct App {
     pub toasts: Vec<Toast>,
     /// Open Properties dialog (right-click → Properties…).
     pub song_props: Option<song_menu::SongProps>,
+    pub song_edit: Option<song_menu::SongEdit>,
     /// Song awaiting the delete confirmation from the right-click menu.
     pub confirm_delete: Option<Song>,
     /// Text to hand to the clipboard at the end of the frame.
@@ -171,6 +172,7 @@ impl App {
             fingerprint_library_version: 0,
             toasts: Vec::new(),
             song_props: None,
+            song_edit: None,
             confirm_delete: None,
             copy_text: None,
             playlist: PlaylistUi::default(),

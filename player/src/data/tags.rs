@@ -92,6 +92,55 @@ pub fn read_song(path: &Path) -> Result<Song> {
     })
 }
 
+/// Editable tag fields; empty strings clear the tag.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TagEdit {
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub album_artist: String,
+    pub year: String,
+    pub genre: String,
+}
+
+/// Overwrite the text tags of `path` in place; pictures and other frames
+/// are kept. Creates an ID3v2 tag when the file has none.
+pub fn write_tags(path: &Path, edit: &TagEdit) -> Result<()> {
+    use lofty::tag::{ItemKey, Tag, TagExt};
+
+    let mut tagged = match catch_unwind(AssertUnwindSafe(|| Probe::open(path)?.read())) {
+        Ok(r) => r?,
+        Err(_) => return Err(anyhow!("lofty panicked reading {}", path.display())),
+    };
+    if tagged.primary_tag().is_none() && tagged.first_tag().is_none() {
+        let kind = tagged.primary_tag_type();
+        tagged.insert_tag(Tag::new(kind));
+    }
+    let tag = tagged
+        .primary_tag_mut()
+        .ok_or_else(|| anyhow!("no tag in {}", path.display()))?;
+
+    let set = |tag: &mut Tag, key: ItemKey, value: &str| {
+        if value.trim().is_empty() {
+            tag.remove_key(&key);
+        } else {
+            tag.insert_text(key, value.trim().to_string());
+        }
+    };
+    set(tag, ItemKey::TrackTitle, &edit.title);
+    set(tag, ItemKey::TrackArtist, &edit.artist);
+    set(tag, ItemKey::AlbumTitle, &edit.album);
+    set(tag, ItemKey::AlbumArtist, &edit.album_artist);
+    set(tag, ItemKey::Genre, &edit.genre);
+    match edit.year.trim().parse::<u32>() {
+        Ok(y) => tag.set_year(y),
+        Err(_) if edit.year.trim().is_empty() => tag.remove_year(),
+        Err(_) => return Err(anyhow!("year must be a number")),
+    }
+    tag.save_to_path(path, lofty::config::WriteOptions::default())
+        .map_err(|e| anyhow!("save tags {}: {e}", path.display()))
+}
+
 pub fn parse_track_prefix(path: &Path) -> Option<i32> {
     let name = path.file_stem()?.to_str()?;
     let (digits, _rest) = split_prefix(name)?;
